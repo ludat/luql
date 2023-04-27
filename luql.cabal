@@ -1,0 +1,78 @@
+cabal-version: 3.4
+name: luql
+version: 0.0.1.0
+license: MPL-2.0
+license-file: LICENSE
+author: Lucas David Traverso
+maintainer: lucas6246@gmail.com
+category: Language
+
+flag ghci-load-test-with-lib
+  description: Allow running ghci on src-test but also load all of src-lib
+  default: False
+  manual: True
+
+common common
+  ghc-options:
+    -Wall
+  default-language: GHC2021
+  default-extensions:
+    DataKinds
+    ImportQualifiedPost
+    LambdaCase
+    LexicalNegation
+    MultiWayIf
+    NumericUnderscores
+    OverloadedRecordDot
+    OverloadedStrings
+    QuasiQuotes
+    ScopedTypeVariables
+    TypeApplications
+
+common deps
+  build-depends:
+    , aeson
+    , base
+    , bytestring
+    , containers
+    , either
+    , megaparsec
+    , mtl
+    , postgresql-query
+    , postgresql-simple
+    -- , pretty-simple
+    , safe
+    , scientific
+    , string-interpolate
+    , text
+    , time
+
+library
+  import: common, deps
+  exposed-modules:
+    LuQL
+    LuQL.Compiler
+    LuQL.Parser
+    LuQL.Render
+    LuQL.Runner
+    LuQL.SqlGeneration
+    LuQL.Types
+  hs-source-dirs:
+    lib
+
+test-suite luql-test
+  import: common, deps
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  other-modules:
+    LangSpec
+    Spec
+  main-is: RunTests.hs
+  build-tool-depends: sydtest-discover:sydtest-discover
+  build-depends:
+    , sydtest
+  if !flag(ghci-load-test-with-lib)
+    build-depends: luql
+
+  if flag(ghci-load-test-with-lib)
+    hs-source-dirs: lib

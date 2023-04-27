@@ -1,0 +1,7 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ From ( 0 , 14 ) ( Nothing , Ref ( 5 , 14 ) "Languages" )
+        , Where ( 15 , 25 ) (Lit ( 21 , 25 ) (LiteralBoolean True))
+        ]
+    }

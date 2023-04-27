@@ -1,0 +1,328 @@
+[ SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 33 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 1 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 76 ) , ( "count" , SqlInt 8 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 5 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 106 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 104 ) , ( "count" , SqlInt 7 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 18 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 64 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 55 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 27 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 23 ) , ( "count" , SqlInt 53 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 56 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 58 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 91 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 8 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 87 ) , ( "count" , SqlInt 5 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 74 ) , ( "count" , SqlInt 4 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 54 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 29 ) , ( "count" , SqlInt 6 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 71 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 68 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 4 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 34 ) , ( "count" , SqlInt 4 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 51 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 96 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 70 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 52 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 80 ) , ( "count" , SqlInt 28 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 83 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 67 ) , ( "count" , SqlInt 5 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 63 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 90 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 10 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 35 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 105 ) , ( "count" , SqlInt 6 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 45 ) , ( "count" , SqlInt 14 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 6 ) , ( "count" , SqlInt 13 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 107 ) , ( "count" , SqlInt 4 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 86 ) , ( "count" , SqlInt 5 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 84 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 39 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 92 ) , ( "count" , SqlInt 10 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 93 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 89 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 101 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 36 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 69 ) , ( "count" , SqlInt 13 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 31 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 50 ) , ( "count" , SqlInt 31 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 102 ) , ( "count" , SqlInt 8 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 60 ) , ( "count" , SqlInt 30 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 14 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 97 ) , ( "count" , SqlInt 15 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 66 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 108 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 109 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 22 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 59 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 13 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 65 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 2 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 16 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 62 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 75 ) , ( "count" , SqlInt 20 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 98 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 73 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 11 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 103 ) , ( "count" , SqlInt 35 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 44 ) , ( "count" , SqlInt 60 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 42 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 99 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 88 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 82 ) , ( "count" , SqlInt 5 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 41 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 40 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 46 ) , ( "count" , SqlInt 8 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 43 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 32 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 53 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 7 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 9 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 100 ) , ( "count" , SqlInt 6 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 38 ) , ( "count" , SqlInt 7 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 15 ) , ( "count" , SqlInt 28 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 79 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 26 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 12 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 48 ) , ( "count" , SqlInt 4 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 85 ) , ( "count" , SqlInt 11 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 72 ) , ( "count" , SqlInt 5 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 95 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 78 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 57 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 24 ) , ( "count" , SqlInt 6 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 81 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 61 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 19 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 77 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 25 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 94 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 30 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 21 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 49 ) , ( "count" , SqlInt 7 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 47 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 3 ) , ( "count" , SqlInt 1 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 17 ) , ( "count" , SqlInt 2 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 28 ) , ( "count" , SqlInt 3 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 20 ) , ( "count" , SqlInt 7 ) ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "city.country_id" , SqlInt 37 ) , ( "count" , SqlInt 1 ) ])
+]

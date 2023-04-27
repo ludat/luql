@@ -1,0 +1,49 @@
+[ SqlRuntimeRow
+    (fromList
+       [ ( "l.language_id" , SqlInt 1 )
+       , ( "l.last_update"
+         , SqlTimestampWithTimezone 2022-02-15 10:02:19 + 0000
+         )
+       , ( "l.name" , SqlText "English" )
+       ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "l.language_id" , SqlInt 2 )
+       , ( "l.last_update"
+         , SqlTimestampWithTimezone 2022-02-15 10:02:19 + 0000
+         )
+       , ( "l.name" , SqlText "Italian" )
+       ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "l.language_id" , SqlInt 3 )
+       , ( "l.last_update"
+         , SqlTimestampWithTimezone 2022-02-15 10:02:19 + 0000
+         )
+       , ( "l.name" , SqlText "Japanese" )
+       ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "l.language_id" , SqlInt 4 )
+       , ( "l.last_update"
+         , SqlTimestampWithTimezone 2022-02-15 10:02:19 + 0000
+         )
+       , ( "l.name" , SqlText "Mandarin" )
+       ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "l.language_id" , SqlInt 5 )
+       , ( "l.last_update"
+         , SqlTimestampWithTimezone 2022-02-15 10:02:19 + 0000
+         )
+       , ( "l.name" , SqlText "French" )
+       ])
+, SqlRuntimeRow
+    (fromList
+       [ ( "l.language_id" , SqlInt 6 )
+       , ( "l.last_update"
+         , SqlTimestampWithTimezone 2022-02-15 10:02:19 + 0000
+         )
+       , ( "l.name" , SqlText "German" )
+       ])
+]

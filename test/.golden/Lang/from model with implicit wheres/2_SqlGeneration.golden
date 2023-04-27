@@ -1,0 +1,34 @@
+PartialQuery
+  { fromTable =
+      Just
+        (LiteralTable
+           FromTable
+             { getTableName = Identifier { fromIdentifier = "customer" }
+             , getTableAlias = Identifier { fromIdentifier = "customer" }
+             , getTableColumns =
+                 [ Identifier { fromIdentifier = "active" }
+                 , Identifier { fromIdentifier = "activebool" }
+                 , Identifier { fromIdentifier = "address_id" }
+                 , Identifier { fromIdentifier = "create_date" }
+                 , Identifier { fromIdentifier = "customer_id" }
+                 , Identifier { fromIdentifier = "email" }
+                 , Identifier { fromIdentifier = "first_name" }
+                 , Identifier { fromIdentifier = "last_name" }
+                 , Identifier { fromIdentifier = "last_update" }
+                 , Identifier { fromIdentifier = "store_id" }
+                 ]
+             })
+  , selectedColumns =
+      [ SelectFromTable Identifier { fromIdentifier = "t" } ]
+  , wheres =
+      [ Call
+          InfixNotation
+          "="
+          [ Ref Identifier { fromIdentifier = "customer.active" }
+          , LiteralInt 1
+          ]
+      ]
+  , joins = []
+  , groupBy = Nothing
+  , orderBy = []
+  }

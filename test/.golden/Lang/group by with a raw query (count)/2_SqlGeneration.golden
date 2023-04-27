@@ -1,0 +1,31 @@
+PartialQuery
+  { fromTable =
+      Just
+        (LiteralTable
+           FromTable
+             { getTableName = Identifier { fromIdentifier = "city" }
+             , getTableAlias = Identifier { fromIdentifier = "city" }
+             , getTableColumns =
+                 [ Identifier { fromIdentifier = "city" }
+                 , Identifier { fromIdentifier = "city_id" }
+                 , Identifier { fromIdentifier = "country_id" }
+                 , Identifier { fromIdentifier = "last_update" }
+                 ]
+             })
+  , selectedColumns =
+      [ SelectColumnFromTable
+          (QualifiedIdentifier (Just "t") "city.country_id")
+      , SelectNewColumn
+          (RawSql [ Left "count(*)" ])
+          Identifier { fromIdentifier = "count" }
+      ]
+  , wheres = []
+  , joins = []
+  , groupBy =
+      Just
+        GroupByDefinition
+          { byColumns =
+              [ Ref Identifier { fromIdentifier = "city.country_id" } ]
+          }
+  , orderBy = []
+  }

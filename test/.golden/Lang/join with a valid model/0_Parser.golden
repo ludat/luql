@@ -1,0 +1,7 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ From ( 0 , 14 ) ( Nothing , Ref ( 5 , 14 ) "Countries" )
+        , Join ( 15 , 26 ) ( Nothing , Ref ( 20 , 26 ) "Cities" ) Nothing
+        ]
+    }

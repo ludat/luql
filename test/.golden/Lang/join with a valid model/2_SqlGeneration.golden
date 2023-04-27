@@ -1,0 +1,41 @@
+PartialQuery
+  { fromTable =
+      Just
+        (LiteralTable
+           FromTable
+             { getTableName = Identifier { fromIdentifier = "country" }
+             , getTableAlias = Identifier { fromIdentifier = "country" }
+             , getTableColumns =
+                 [ Identifier { fromIdentifier = "country" }
+                 , Identifier { fromIdentifier = "country_id" }
+                 , Identifier { fromIdentifier = "last_update" }
+                 ]
+             })
+  , selectedColumns =
+      [ SelectFromTable Identifier { fromIdentifier = "t" }
+      , SelectFromTable Identifier { fromIdentifier = "city" }
+      ]
+  , wheres = []
+  , joins =
+      [ ( FromTable
+            { getTableName = Identifier { fromIdentifier = "city" }
+            , getTableAlias = Identifier { fromIdentifier = "city" }
+            , getTableColumns =
+                [ Identifier { fromIdentifier = "city" }
+                , Identifier { fromIdentifier = "city_id" }
+                , Identifier { fromIdentifier = "country_id" }
+                , Identifier { fromIdentifier = "last_update" }
+                ]
+            }
+        , [ Call
+              InfixNotation
+              "="
+              [ Ref Identifier { fromIdentifier = "country.country_id" }
+              , Ref Identifier { fromIdentifier = "city.country_id" }
+              ]
+          ]
+        )
+      ]
+  , groupBy = Nothing
+  , orderBy = []
+  }

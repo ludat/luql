@@ -1,0 +1,40 @@
+Right
+  CompiledQuery
+    { unCompiledQuery =
+        [ From
+            ()
+            ( "city"
+            , ModelDefinition
+                { tableName = Identifier { fromIdentifier = "city" }
+                , defaultSingularName = Identifier { fromIdentifier = "city" }
+                , columns =
+                    fromList
+                      [ ( Identifier { fromIdentifier = "city" } , StringType )
+                      , ( Identifier { fromIdentifier = "city_id" } , IntType )
+                      , ( Identifier { fromIdentifier = "country_id" } , IntType )
+                      , ( Identifier { fromIdentifier = "last_update" } , TimestampType )
+                      ]
+                , relatedTables =
+                    fromList
+                      [ ( Identifier { fromIdentifier = "country" }
+                        , ( Identifier { fromIdentifier = "country_id" }
+                          , Identifier { fromIdentifier = "country_id" }
+                          )
+                        )
+                      ]
+                , implicitWhere = Nothing
+                }
+            )
+        , GroupBy
+            ()
+            [ ( ExprExt
+                  (ComputedColumn
+                     IntType
+                     ColumnDefinition
+                       { column = QualifiedIdentifier (Just "city") "country_id" })
+              , Nothing
+              )
+            ]
+            [ Let () "count" (RawSql AnyType [ Left "count(*)" ]) ]
+        ]
+    }

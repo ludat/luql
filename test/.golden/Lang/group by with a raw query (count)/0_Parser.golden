@@ -1,0 +1,14 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ From ( 0 , 11 ) ( Nothing , Ref ( 5 , 11 ) "Cities" )
+        , GroupBy
+            ( 12 , 18 )
+            [ ( Prop ( 25 , 37 ) (Ref ( 21 , 25 ) "city") "country_id"
+              , Nothing
+              )
+            ]
+            [ Let ( 41 , 63 ) "count" (RawSql ( 53 , 63 ) [ Left "count(*)" ])
+            ]
+        ]
+    }
