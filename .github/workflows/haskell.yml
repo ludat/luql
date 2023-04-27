@@ -11,8 +11,29 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: '123456'
+          POSTGRES_DATABASE: postgres
+
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
 
     steps:
     - uses: actions/checkout@v3
@@ -33,11 +54,18 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
+    - name: Setup the db
+      run: |
+        curl -L https://github.com/devrimgunduz/pagila/raw/fef9675714cfba1756df4719b5e36075a7ddf90e/pagila-schema.sql | psql -f - postgres://postgres:123456@localhost:5432/postgres
+        curl -L https://github.com/devrimgunduz/pagila/raw/fef9675714cfba1756df4719b5e36075a7ddf90e/pagila-data.sql | psql -f - postgres://postgres:123456@localhost:5432/postgres
+
     - name: Install dependencies
       run: |
         cabal update
         cabal build --only-dependencies --enable-tests --enable-benchmarks
+
     - name: Build
       run: cabal build --enable-tests --enable-benchmarks all
+
     - name: Run tests
       run: cabal test all --test-show-details=streaming
