@@ -1,0 +1,2 @@
+from Countries
+join Cities

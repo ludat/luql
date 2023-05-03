@@ -73,8 +73,12 @@ itMatchesSnapshot name program = describe name $ do
       parsedProgram =
         parseQuery program
 
-  it "0_Parser" $
-    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/0_Parser.golden|] $
+  it "0_Raw" $
+    pureGoldenTextFile [i|test/.golden/Lang/#{name}/0_Raw.golden|] $
+      program
+
+  it "1_Parser" $
+    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/1_Parser.golden|] $
       parsedProgram
 
   let compiledProgram :: Either [Error] CompiledQuery
@@ -82,8 +86,8 @@ itMatchesSnapshot name program = describe name $ do
         parsedProgram
           & either (error . show) id
           & compileProgram models
-  it "1_Compiler" $
-    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/1_Compiler.golden|] $
+  it "2_Compiler" $
+    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/2_Compiler.golden|] $
       compiledProgram
 
   let partialSqlQuery :: LuQL.SqlGeneration.PartialQuery
@@ -92,8 +96,8 @@ itMatchesSnapshot name program = describe name $ do
           & either (error . show) id
           & unCompiledQuery
           & LuQL.SqlGeneration.compileStatements
-  it "2_SqlGeneration" $
-    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/2_SqlGeneration.golden|] $
+  it "3_SqlGeneration" $
+    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/3_SqlGeneration.golden|] $
       partialSqlQuery
 
   beforeAllWith (\conn -> do
@@ -103,13 +107,13 @@ itMatchesSnapshot name program = describe name $ do
           & renderSqlBuilder conn
       pure rawSqlQuery
     ) $ do
-    itWithOuter "3_Render" $ \(rawSqlQuery :: PG.Query) -> do
-      pureGoldenByteStringFile [i|test/.golden/Lang/#{name}/3_Render.golden|] $
+    itWithOuter "4_Render" $ \(rawSqlQuery :: PG.Query) -> do
+      pureGoldenByteStringFile [i|test/.golden/Lang/#{name}/4_Render.golden|] $
         PG.fromQuery rawSqlQuery
 
-    itWithAll "4_Run" (\(HCons rawSqlQuery (HCons conn HNil) :: HList '[PG.Query, PG.Connection]) () -> do
+    itWithAll "5_Run" (\(HCons rawSqlQuery (HCons conn HNil) :: HList '[PG.Query, PG.Connection]) () -> do
       queryResults <- PG.query_ @SqlRuntimeRow conn rawSqlQuery
-      pure $ goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/4_Run.golden|] $
+      pure $ goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/5_Run.golden|] $
         queryResults
       )
 
