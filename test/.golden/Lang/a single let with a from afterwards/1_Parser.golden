@@ -1,0 +1,7 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ Let ( 0 , 10 ) "a" (Lit ( 8 , 10 ) (LiteralInt 23))
+        , From ( 11 , 25 ) ( Nothing , Ref ( 16 , 25 ) "Languages" )
+        ]
+    }

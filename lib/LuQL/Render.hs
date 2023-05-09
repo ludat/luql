@@ -29,7 +29,7 @@ renderPartialQuery PartialQuery {..} =
           then mempty
           else [PG.sqlExp| ^{mconcat $ intersperse " " otherFragments}|]
    in [PG.sqlExp|SELECT ^{renderSelectedColumns selectedColumns}
-    ^{renderFrom $ fromJust fromTable}^{fragments}|]
+    ^{renderFrom $ fromTable}^{fragments}|]
 
 renderOrderBy :: [(SqlExpression, Maybe OrderDirection)] -> Maybe SqlBuilder
 renderOrderBy [] = Nothing
@@ -45,11 +45,13 @@ renderOrderDirection (Nothing) = mempty
 renderOrderDirection (Just Asc) = [PG.sqlExp| ASC|]
 renderOrderDirection (Just Desc) = [PG.sqlExp| DESC|]
 
-renderFrom :: PartialFromTable -> SqlBuilder
-renderFrom (SubqueryTable fromPartialQuery aliasName) =
+renderFrom :: Maybe PartialFromTable -> SqlBuilder
+renderFrom (Just (SubqueryTable fromPartialQuery aliasName)) =
   [PG.sqlExp|FROM (^{renderPartialQuery fromPartialQuery}) AS ^{aliasName}|]
-renderFrom (LiteralTable table) =
+renderFrom (Just (LiteralTable table)) =
   [PG.sqlExp|FROM (^{renderFromTable table}) AS "t"|]
+renderFrom Nothing =
+  [PG.sqlExp| |]
 
 renderFromTable :: Table -> SqlBuilder
 renderFromTable FromTable {..} =

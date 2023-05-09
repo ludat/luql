@@ -1,0 +1,29 @@
+Right
+  CompiledQuery
+    { unCompiledQuery =
+        [ Let () "a" (Lit IntType (LiteralInt 23))
+        , From
+            ()
+            ( "language"
+            , ModelDefinition
+                { tableName = Identifier { fromIdentifier = "language" }
+                , defaultSingularName = Identifier { fromIdentifier = "language" }
+                , columns =
+                    fromList
+                      [ ( Identifier { fromIdentifier = "language_id" } , IntType )
+                      , ( Identifier { fromIdentifier = "last_update" } , TimestampType )
+                      , ( Identifier { fromIdentifier = "name" } , StringType )
+                      ]
+                , relatedTables =
+                    fromList
+                      [ ( Identifier { fromIdentifier = "film" }
+                        , ( Identifier { fromIdentifier = "language_id" }
+                          , Identifier { fromIdentifier = "original_language_id" }
+                          )
+                        )
+                      ]
+                , implicitWhere = Nothing
+                }
+            )
+        ]
+    }

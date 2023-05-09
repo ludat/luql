@@ -61,6 +61,17 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
       }
     |]
 
+  itMatchesSnapshot "a single let with a number"
+    [__i|
+      let a = 23
+    |]
+
+  itMatchesSnapshot "a single let with a from afterwards"
+    [__i|
+      let a = 23
+      from Languages
+    |]
+
 withDatabase :: (PG.Connection -> IO ()) -> IO ()
 withDatabase action = do
   conn <- PG.connectPostgreSQL "postgres://postgres:123456@localhost:5432/postgres"

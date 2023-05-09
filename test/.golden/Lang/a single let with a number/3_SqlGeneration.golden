@@ -1,0 +1,11 @@
+PartialQuery
+  { fromTable = Nothing
+  , selectedColumns =
+      [ SelectNewColumn
+          (LiteralInt 23) Identifier { fromIdentifier = "a" }
+      ]
+  , wheres = []
+  , joins = []
+  , groupBy = Nothing
+  , orderBy = []
+  }

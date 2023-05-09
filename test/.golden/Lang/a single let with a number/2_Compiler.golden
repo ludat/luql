@@ -1,0 +1,3 @@
+Right
+  CompiledQuery
+    { unCompiledQuery = [ Let () "a" (Lit IntType (LiteralInt 23)) ] }

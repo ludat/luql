@@ -99,7 +99,7 @@ compileStatement q@(T.From _ (modelName, model)) = do
                   (Identifier modelName)
                   (Map.keys $ columns model),
           selectedColumns =
-            [SelectFromTable "t"],
+            query.selectedColumns ++ [SelectFromTable "t"],
           wheres = []
         }
 compileStatement q@(T.Where _ expression) = do
