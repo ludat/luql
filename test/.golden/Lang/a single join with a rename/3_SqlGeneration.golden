@@ -1,0 +1,41 @@
+PartialQuery
+  { fromTable =
+      Just
+        (LiteralTable
+           FromTable
+             { getTableName = Identifier { fromIdentifier = "language" }
+             , getTableAlias = Identifier { fromIdentifier = "l" }
+             , getTableColumns =
+                 [ Identifier { fromIdentifier = "language_id" }
+                 , Identifier { fromIdentifier = "last_update" }
+                 , Identifier { fromIdentifier = "name" }
+                 ]
+             })
+  , selectedColumns =
+      [ SelectFromTable Identifier { fromIdentifier = "t" }
+      , SelectFromTable Identifier { fromIdentifier = "film" }
+      ]
+  , wheres = []
+  , joins =
+      [ ( FromTable
+            { getTableName = Identifier { fromIdentifier = "film" }
+            , getTableAlias = Identifier { fromIdentifier = "film" }
+            , getTableColumns =
+                [ Identifier { fromIdentifier = "description" }
+                , Identifier { fromIdentifier = "film_id" }
+                , Identifier { fromIdentifier = "language_id" }
+                , Identifier { fromIdentifier = "title" }
+                ]
+            }
+        , [ Call
+              InfixNotation
+              "="
+              [ Ref Identifier { fromIdentifier = "l.language_id" }
+              , Ref Identifier { fromIdentifier = "film.language_id" }
+              ]
+          ]
+        )
+      ]
+  , groupBy = Nothing
+  , orderBy = []
+  }

@@ -1,0 +1,7 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ From ( 0 , 15 ) ( Just "l" , Ref ( 5 , 15 ) "Languages" )
+        , Join ( 20 , 30 ) ( Nothing , Ref ( 25 , 30 ) "Films" ) Nothing
+        ]
+    }

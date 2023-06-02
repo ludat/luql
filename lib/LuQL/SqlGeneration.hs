@@ -76,7 +76,7 @@ newtype CompileState = CompileState {compileStatePartialQuery :: PartialQuery}
 
 instance HasPartialQuery CompileM where
   getPartialQuery = do
-    gets compileStatePartialQuery
+    gets (.compileStatePartialQuery)
   putPartialQuery partialQuery =
     modify' (\cs -> cs {compileStatePartialQuery = partialQuery})
 
@@ -95,9 +95,9 @@ compileStatement q@(T.From _ (modelName, model)) = do
             Just $
               LiteralTable $
                 FromTable
-                  (tableName model)
+                  (model.tableName)
                   (Identifier modelName)
-                  (Map.keys $ columns model),
+                  (Map.keys model.columns),
           selectedColumns =
             query.selectedColumns ++ [SelectFromTable "t"],
           wheres = []
@@ -108,7 +108,7 @@ compileStatement q@(T.Where _ expression) = do
   modifyPartialQuery $
     \query ->
       query
-        { wheres = wheres query ++ [newWhere]
+        { wheres = query.wheres ++ [newWhere]
         }
 compileStatement q@(T.Join _ (modelName, model) (expr)) = do
   addNewSubqueryIfNecessary q
@@ -117,10 +117,10 @@ compileStatement q@(T.Join _ (modelName, model) (expr)) = do
   modifyPartialQuery $
     \query ->
       query
-        { selectedColumns = selectedColumns query ++ [SelectFromTable $ Identifier modelName],
+        { selectedColumns = query.selectedColumns ++ [SelectFromTable $ Identifier modelName],
           joins =
             query.joins
-              ++ [ ( FromTable (tableName model) (Identifier modelName) (Map.keys $ columns model),
+              ++ [ ( FromTable (model.tableName) (Identifier modelName) (Map.keys model.columns),
                      [compExpr]
                    )
                  ]
@@ -152,7 +152,7 @@ compileStatement q@(T.Let _ti name expr) = do
   addNewSubqueryIfNecessary q
   modifyPartialQuery $ \query ->
     query
-      { selectedColumns = selectedColumns query ++ [SelectNewColumn (compileExpression expr) $ Identifier name]
+      { selectedColumns = query.selectedColumns ++ [SelectNewColumn (compileExpression expr) $ Identifier name]
       }
 compileStatement q@(T.OrderBy _ exprs) = do
   addNewSubqueryIfNecessary q
@@ -291,7 +291,7 @@ compileExpression (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdent
   Ref $ compileNameForTableColumn (Identifier table) (Identifier name)
 compileExpression (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Nothing) name)))) =
   Ref $ Identifier name
-compileExpression (T.ExprExt (ComputedModel _ _ _)) =
+compileExpression (T.ExprExt (ComputedModel _ _ _ _)) =
   error "falle"
 compileExpression (T.ExprExt (ComputedModelDefinition _ _)) =
   error "falle"

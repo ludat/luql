@@ -6,7 +6,7 @@ Right
             ( "language"
             , ModelDefinition
                 { tableName = Identifier { fromIdentifier = "language" }
-                , defaultSingularName = Identifier { fromIdentifier = "language" }
+                , defaultSingularName = "language"
                 , columns =
                     fromList
                       [ ( Identifier { fromIdentifier = "language_id" } , IntType )
@@ -17,7 +17,7 @@ Right
                     fromList
                       [ ( Identifier { fromIdentifier = "film" }
                         , ( Identifier { fromIdentifier = "language_id" }
-                          , Identifier { fromIdentifier = "original_language_id" }
+                          , Identifier { fromIdentifier = "language_id" }
                           )
                         )
                       ]

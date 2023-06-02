@@ -6,7 +6,7 @@ Right
             ( "city"
             , ModelDefinition
                 { tableName = Identifier { fromIdentifier = "city" }
-                , defaultSingularName = Identifier { fromIdentifier = "city" }
+                , defaultSingularName = "city"
                 , columns =
                     fromList
                       [ ( Identifier { fromIdentifier = "city" } , StringType )

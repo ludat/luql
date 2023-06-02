@@ -83,7 +83,10 @@ renderJoins joins =
 
 renderJoin :: (Table, [SqlExpression]) -> SqlBuilder
 renderJoin (table, conds) =
-  [PG.sqlExp|JOIN (^{renderFromTable table}) AS ^{getTableAlias table} ON ^{fromJust $ renderConds conds}|]
+  let
+    ta = table.getTableAlias
+  in
+  [PG.sqlExp|JOIN (^{renderFromTable table}) AS ^{ta} ON ^{fromJust $ renderConds conds}|]
 
 renderSelectedColumns :: [SelectedColumn] -> SqlBuilder
 renderSelectedColumns columns =

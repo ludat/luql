@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs #-}
-module LangSpec where
+module LangSpec (spec) where
 
 import Data.Function ((&))
 import Data.String.Interpolate
@@ -13,10 +13,8 @@ import qualified LuQL.SqlGeneration
 import Test.Syd
 import Text.Megaparsec (ParseErrorBundle)
 import qualified Database.PostgreSQL.Simple as PG
-import Data.Map (Map)
-import Data.Map qualified as Map
-import LuQL.Types (QueryExpression(..), LiteralValue(..))
 import LuQL.Runner (SqlRuntimeRow(..))
+import Tests.Utils (models)
 
 spec :: Spec
 spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
@@ -71,6 +69,11 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
       let a = 23
       from Languages
     |]
+  itMatchesSnapshot "a single join with a rename"
+    [__i|
+        from Languages as l
+        join Films
+    |]
 
 withDatabase :: (PG.Connection -> IO ()) -> IO ()
 withDatabase action = do
@@ -80,13 +83,13 @@ withDatabase action = do
 
 itMatchesSnapshot :: String -> Text -> TestDefM '[PG.Connection]  () ()
 itMatchesSnapshot name program = describe name $ do
-  let parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
-      parsedProgram =
-        parseQuery program
-
   it "0_Raw" $
     pureGoldenTextFile [i|test/.golden/Lang/#{name}/0_Raw.golden|] $
       program
+
+  let parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
+      parsedProgram =
+        parseQuery program
 
   it "1_Parser" $
     goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/1_Parser.golden|] $
@@ -105,7 +108,7 @@ itMatchesSnapshot name program = describe name $ do
       partialSqlQuery =
         compiledProgram
           & either (error . show) id
-          & unCompiledQuery
+          & (.unCompiledQuery)
           & LuQL.SqlGeneration.compileStatements
   it "3_SqlGeneration" $
     goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/3_SqlGeneration.golden|] $
@@ -128,103 +131,3 @@ itMatchesSnapshot name program = describe name $ do
         queryResults
       )
 
-models :: Map Text ModelDefinition
-models =
-  Map.fromList
-    [ ("Countries", countries)
-    , ("Cities", cities)
-    , ("Customers", customers)
-    , ("Languages", languages)
-    , ("Italian", italian)
-    ]
-  where
-    countries =
-      ModelDefinition
-        { tableName = "country",
-          defaultSingularName = "country",
-          columns =
-            Map.fromList
-              [ ("country_id", IntType)
-              , ("country", StringType)
-              , ("last_update", TimestampType)
-              ],
-          implicitWhere = Nothing,
-          relatedTables =
-            Map.fromList
-              [ ("city", ("country_id", "country_id"))
-              ]
-        }
-    languages =
-      ModelDefinition
-        { tableName = "language",
-          defaultSingularName = "language",
-          columns =
-            Map.fromList
-              [ ("language_id", IntType)
-              , ("name", StringType)
-              , ("last_update", TimestampType)
-              ],
-          implicitWhere = Nothing,
-          relatedTables =
-            Map.fromList
-              [ ("film", ("language_id", "language_id"))
-              , ("film", ("language_id", "original_language_id"))
-              ]
-        }
-    italian =
-      languages
-        { defaultSingularName = "italian"
-        , implicitWhere = Just $ \model ->
-            Apply
-              (0, 0)
-              (Ref (0, 0) "==")
-              [ Prop (0, 0) (Ref (0, 0) model) "name"
-              , Lit (0, 0) $ LiteralString "Italian"
-              ]
-        }
-    cities =
-      ModelDefinition
-        { tableName = "city",
-          defaultSingularName = "city",
-          columns =
-            Map.fromList
-              [ ("city_id", IntType)
-              , ("city", StringType)
-              , ("country_id", IntType)
-              , ("last_update", TimestampType)
-              ],
-          implicitWhere = Nothing,
-          relatedTables =
-            Map.fromList
-              [ ("country", ("country_id", "country_id"))
-              ]
-        }
-    customers =
-      ModelDefinition
-        { tableName = "customer",
-          defaultSingularName = "customer",
-          columns =
-            Map.fromList
-              [ ("customer_id", IntType)
-              , ("store_id", IntType)
-              , ("first_name", StringType)
-              , ("last_name", StringType)
-              , ("email", StringType)
-              , ("address_id", StringType)
-              , ("activebool", BooleanType)
-              , ("create_date", DateType)
-              , ("last_update", TimestampType)
-              , ("active", IntType)
-              ],
-          implicitWhere = Just $ \model ->
-            Apply
-              (0, 0)
-              (Ref (0, 0) "==")
-              [ Prop (0, 0) (Ref (0, 0) model) "active"
-              , Lit (0, 0) $ LiteralInt 1
-              ],
-          relatedTables =
-            Map.fromList
-              [
-              ]
-        }

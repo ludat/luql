@@ -68,7 +68,7 @@ type instance ExprE "ext" "ext" Compiled = CompiledExprExt
 data CompiledExprExt
   = ExprCompilationFailed (QueryExpression Raw)
   | ComputedColumn (ExprE "computed" "ctx" Compiled) ColumnDefinition
-  | ComputedModel (ExprE "computed" "ctx" Compiled) Text ModelDefinition
+  | ComputedModel (ExprE "computed" "ctx" Compiled) Text Identifier (Map TableName (ColumnName, ColumnName))
   | ComputedModelDefinition (ExprE "computed" "ctx" Compiled) ModelDefinition
   | ComputedFunction (ExprE "computed" "ctx" Compiled) FunctionTypeChecker
 
@@ -98,11 +98,11 @@ instance Eq ModelDefinition where
       && m1.defaultSingularName == m2.defaultSingularName
       && m1.columns == m2.columns
       && m1.relatedTables == m2.relatedTables
-      && (((==) `on` (fmap ($ "self") . implicitWhere)) m1 m2)
+      && (((==) `on` (fmap ($ "self") . (.implicitWhere))) m1 m2)
 
 data ModelDefinition = ModelDefinition
   { tableName :: TableName,
-    defaultSingularName :: TableName,
+    defaultSingularName :: Text,
     columns :: Map ColumnName RuntimeType,
     implicitWhere :: Maybe (Text -> QueryExpression Raw),
     relatedTables :: Map TableName (ColumnName, ColumnName)
@@ -116,7 +116,7 @@ instantiateModel model =
 instantiateModel' :: ModelDefinition -> Maybe Text -> (RuntimeType, Text)
 instantiateModel' model (maybeModelName) =
   let type_ = (ModelType model.columns)
-      modelName = fromMaybe (fromIdentifier model.defaultSingularName) maybeModelName
+      modelName = fromMaybe model.defaultSingularName maybeModelName
    in (type_, modelName)
 
 data Error
@@ -170,20 +170,20 @@ compileStatement (From originalPosition (maybeModelAs, modelExpr)) = do
   tcModel <- compileExpression modelExpr
   case tcModel of
     (ExprExt (ComputedModelDefinition _ model)) -> do
-      let (runtimeModel, tableName) = instantiateModel' model maybeModelAs
+      let (runtimeModel, modelName) = instantiateModel' model maybeModelAs
       modify' $ \typeInfo ->
         typeInfo
           { variablesInScope =
               typeInfo.variablesInScope
-                ++ [(tableName, ExprExt $ ComputedModel runtimeModel tableName model)]
+                ++ [(modelName, ExprExt $ ComputedModel runtimeModel modelName (model.tableName) model.relatedTables)]
           }
       implicitWheresTC <- case model.implicitWhere of
-        Just implicitWhere -> compileStatement $ Where (0, 0) $ implicitWhere $ tableName
+        Just implicitWhere -> compileStatement $ Where (0, 0) $ implicitWhere $ modelName
         Nothing -> pure []
-      pure $ [From () (tableName, model)] ++ implicitWheresTC
+      pure $ [From () (modelName, model)] ++ implicitWheresTC
     -- (ValueMetadata (ModelDefinitionType) (ModelDefinitionSource model)) -> do
     _ -> do
-      addError originalPosition [iii|No es un modelo valido: #{tcModel}|]
+      addError originalPosition [iii|Invalid model|]
       pure $ [] -- [From originalTypeInfo tcModel]
 compileStatement (Where originalPosition expression) = do
   newWhere <- compileExpression expression
@@ -204,12 +204,12 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
         originalPosition
         (StmtExt $ StmtCompilationFailed e)
 
-  let (otherRuntimeModel, otherTableName) = instantiateModel' newModelToJoin maybeModelAs
+  let (otherRuntimeModel, otherModelName) = instantiateModel' newModelToJoin maybeModelAs
 
   modify' $ \typeInfo ->
     typeInfo
       { variablesInScope =
-          (otherTableName, ExprExt $ ComputedModel otherRuntimeModel otherTableName newModelToJoin)
+          (otherModelName, ExprExt $ ComputedModel otherRuntimeModel otherModelName newModelToJoin.tableName newModelToJoin.relatedTables)
             : typeInfo.variablesInScope
       }
 
@@ -218,65 +218,106 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
       Just joinExpr -> compileExpression joinExpr
       Nothing -> do
         (modelToJoin, (myColumn, otherColumn)) <-
-          originalTypeInfo
-            & variablesInScope
+          originalTypeInfo.variablesInScope
             & mapMaybe
               ( \case
-                  (variableName, ExprExt (ComputedModel _ _ m)) ->
-                    (variableName,) <$> (relatedTables newModelToJoin Map.!? tableName m)
+                  (_, ExprExt (ComputedModel (ModelType cols) modelName tableName _)) -> do
+                    (selfCol, foreignCol) <- newModelToJoin.relatedTables Map.!? tableName
+                    guard (Map.member foreignCol cols)
+                    pure (modelName, (selfCol, foreignCol))
                   _ -> Nothing
               )
             & headMay
             & maybe
               ( do
                   addCatastrophicError
-                    [iii|model to join doesn't exist: #{modelExpr}|]
+                    [iii|no model to join available|]
                     originalPosition
                     (StmtExt $ StmtCompilationFailed $ e)
-              )
-              pure
+              ) pure
+
 
         case newModelToJoin.implicitWhere of
           Just where_ ->
             compileExpression $
               Apply
-                (0, 0)
-                (Ref (0, 0) "&&")
+                originalPosition
+                (Ref originalPosition "&&")
                 [ Apply
-                    (0, 0)
-                    (Ref (0, 0) "==")
-                    [ Prop (0, 0) (Ref (0, 0) modelToJoin) $ fromIdentifier otherColumn,
-                      Prop (0, 0) (Ref (0, 0) otherTableName) $ fromIdentifier myColumn
+                    originalPosition
+                    (Ref originalPosition "==")
+                    [ Prop originalPosition (Ref originalPosition modelToJoin) $ fromIdentifier otherColumn,
+                      Prop originalPosition (Ref originalPosition otherModelName) $ fromIdentifier myColumn
                     ],
-                  where_ otherTableName
+                  where_ otherModelName
                 ]
           Nothing ->
             compileExpression $
               Apply
-                (0, 0)
-                (Ref (0, 0) "==")
-                [ Prop (0, 0) (Ref (0, 0) modelToJoin) $ fromIdentifier otherColumn,
-                  Prop (0, 0) (Ref (0, 0) otherTableName) $ fromIdentifier myColumn
+                originalPosition
+                (Ref originalPosition "==")
+                [ Prop originalPosition (Ref originalPosition modelToJoin) $ fromIdentifier otherColumn,
+                  Prop originalPosition (Ref originalPosition otherModelName) $ fromIdentifier myColumn
                 ]
 
   pure
-    [Join () (otherTableName, newModelToJoin) joinExpression]
+    $ [Join () (otherModelName, newModelToJoin) joinExpression]
 compileStatement (GroupBy _ groupByColumns letStatements) = do
-  tg <- mapM (\(expr, name) -> (,name) <$> compileExpression expr) groupByColumns
+  oldTypeInfo <- get
+  tg <- compileAndSetTheNewTypeInfo oldTypeInfo groupByColumns
   definitions <- mconcat <$> mapM compileStatement letStatements
   pure [GroupBy () tg definitions]
+  where
+    compileAndSetTheNewTypeInfo oldTypeInfo columns = do
+      compiledColumns <- forM columns $ \(column, name) -> do
+        compiledExpression <- compileExpression column
+        pure (compiledExpression, name)
+
+      vars <- foldM (\acc (name, expression) -> do
+        case expression of
+          ExprExt (ComputedModel (ModelType propsMap) modelName tableName relatedTables) -> do
+            let relevantColumns =
+                  compiledColumns
+                  & mapMaybe (\case
+                    (ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just t) n))), _) | t == modelName -> Just n
+                    _ -> Nothing
+                    )
+                  & fmap Identifier
+            pure $ acc ++
+              [ (name, ExprExt (ComputedModel
+                  (ModelType (propsMap & Map.filterWithKey (\k _ -> k `elem` relevantColumns)))
+                  modelName
+                  tableName
+                  (relatedTables & Map.filter (\(_, column) -> column `elem` relevantColumns)))
+                )
+              ]
+          ExprExt (ComputedModelDefinition _ _) ->
+            pure $ acc ++ [(name, expression)]
+          _ -> pure acc
+        )
+        ([] :: [(Text, QueryExpression Compiled)])
+        oldTypeInfo.variablesInScope
+
+      modifyTypeInfo $ \ty ->
+        ty {
+          variablesInScope = vars
+        }
+
+      pure compiledColumns
+
 compileStatement (Let _originalPosition name expression) = do
   e <- compileExpression expression
 
   modifyTypeInfo $ \ti ->
     ti
       { variablesInScope =
-          variablesInScope ti
+          ti.variablesInScope
             ++ [ ( name,
                    ExprExt $ ComputedColumn (getType e) (ColumnDefinition $ QualifiedIdentifier Nothing name)
                  )
                ]
       }
+
   pure [Let () name e]
 compileStatement (Return _ exprs) = do
   tExprs <- mapM compileExpression exprs
@@ -315,7 +356,7 @@ instance Show RuntimeFunction where
   show RuntimeFunction {..} = [iii|Function #{rFuncName}|]
 
 instance Eq RuntimeFunction where
-  f1 == f2 = ((==) `on` rFuncName) f1 f2 && ((==) `on` rFuncNotation) f1 f2
+  f1 == f2 = f1.rFuncName == f2.rFuncName && f1.rFuncNotation == f2.rFuncNotation
 
 data RuntimeType
   = UnknownType
@@ -393,9 +434,9 @@ compileExpression (Lit _ (LiteralNull)) = pure $ Lit (lit NullType) LiteralNull
 compileExpression e@(Prop pos expr propName) = do
   tExpr <- compileExpression expr
   case tExpr of
-    (ExprExt (ComputedModel (ModelType m) n _)) -> case Map.lookup (Identifier propName) m of
+    (ExprExt (ComputedModel (ModelType m) n _ _)) -> case Map.lookup (Identifier propName) m of
       Nothing -> do
-        addError pos [iii|2 #{tExpr} no tiene una propiedad: #{propName}|]
+        addError pos [iii|#{expr} no tiene una propiedad: #{propName}|]
         pure $ ExprExt $ ExprCompilationFailed $ e
       Just ty -> do
         pure $
@@ -487,7 +528,7 @@ getType (If ty _ _ _) = ty
 getType (ExprExt (ExprCompilationFailed _)) = UnknownType
 getType (ExprExt (ComputedColumn ty _)) = ty
 getType (ExprExt (ComputedFunction ty _)) = ty
-getType (ExprExt (ComputedModel ty _ _)) = ty
+getType (ExprExt (ComputedModel ty _ _ _)) = ty
 getType (ExprExt (ComputedModelDefinition ty _)) = ty
 
 equalityFunction :: Text -> FunctionTypeChecker
@@ -552,49 +593,7 @@ nativeFunctions =
       ("+", binaryOperator "+"),
       ("*", binaryOperator "*"),
       ("+", binaryOperator "+"),
-      ( "-",
-        binaryOperator "-"
-        -- FunctionTypeChecker $ \pos paramExprs -> do
-        --     tExprs <- forM paramExprs $ \e -> do
-        --       (getPos e,) <$> compileExpression e
-        --     case tExprs of
-        --       [(_p1, e1), (_p2, e2)] -> case (getType e1, getType e2) of
-        --         (DateType, DateType) -> do
-        --           pure
-        --             ( [e1, e2]
-        --             , getType e1
-        --             , ("-", [getType e1, getType e2])
-        --             )
-        --         (IntType, IntType) -> do
-        --           pure
-        --             ( [e1, e2]
-        --             , getType e1
-        --             , ("-", [getType e1, getType e2])
-        --             )
-        --         (DateType, TimestampType) -> do
-        --           pure
-        --             ( [e1, e2]
-        --             , getType e1
-        --             , ("-", [getType e1, getType e2])
-        --             )
-        --         (TimestampType, DateType) -> do
-        --           pure
-        --             ( [e1, e2]
-        --             , getType e1
-        --             , ("-", [getType e1, getType e2])
-        --             )
-        --         (TimestampType, TimestampType) -> do
-        --           pure
-        --             ( [e1, e2]
-        --             , getType e1
-        --             , ("-", [getType e1, getType e2])
-        --             )
-        --         (t1, t2) -> do
-        --           error [iii|- with types #{t1} and #{t2}|]
-        --       _ -> do
-        --         addError pos [iii|?? expects two parameters|]
-        --         pure ([], UnknownType, undefined)
-      ),
+      ( "-", binaryOperator "-"),
       ("%", binaryOperator "%"),
       ("&&", binaryOperator "&&"),
       ("<", comparisonFunction "<"),
@@ -715,7 +714,7 @@ addError :: (HasTypeInfo m) => (Int, Int) -> Text -> m ()
 addError pos newError =
   modifyTypeInfo $ \ti ->
     ti
-      { errors = errors ti ++ [CompilerError newError pos]
+      { errors = ti.errors ++ [CompilerError newError pos]
       }
 
 addCatastrophicError ::

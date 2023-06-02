@@ -13,7 +13,10 @@ compileQuery :: Models -> RawQuery -> SqlBuilder
 compileQuery models (RawQuery queryStatements) = do
   let typecheckedStatements = case LuQL.Compiler.compileStatements models queryStatements of
         (qss, TypeInfo {errors = []}) -> qss
-        (_, ti) -> error [iii|errores aparecieron en la query: #{errors ti}|]
+        (_, ti) ->
+          let
+            errors = ti.errors
+          in error [iii|errores aparecieron en la query: #{errors}|]
 
       partialQuery = LuQL.SqlGeneration.compileStatements typecheckedStatements
 

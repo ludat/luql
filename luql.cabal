@@ -22,6 +22,7 @@ common common
     LambdaCase
     LexicalNegation
     MultiWayIf
+    NoFieldSelectors
     NumericUnderscores
     OverloadedRecordDot
     OverloadedStrings
@@ -67,6 +68,8 @@ test-suite luql-test
   other-modules:
     LangSpec
     Spec
+    Tests.Utils
+    TypeCheckerSpec
   main-is: RunTests.hs
   build-tool-depends: sydtest-discover:sydtest-discover
   ghc-options:
@@ -75,6 +78,7 @@ test-suite luql-test
     -with-rtsopts=-N
   build-depends:
     , sydtest
+    , pretty-simple
   if !flag(ghci-load-test-with-lib)
     build-depends: luql
 

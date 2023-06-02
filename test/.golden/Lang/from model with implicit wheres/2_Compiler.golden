@@ -6,7 +6,7 @@ Right
             ( "customer"
             , ModelDefinition
                 { tableName = Identifier { fromIdentifier = "customer" }
-                , defaultSingularName = Identifier { fromIdentifier = "customer" }
+                , defaultSingularName = "customer"
                 , columns =
                     fromList
                       [ ( Identifier { fromIdentifier = "active" } , IntType )
