@@ -410,7 +410,7 @@ compileExpression e@(Prop pos expr propName) = do
               ( Apply
                   (0, 0)
                   (Ref (0, 0) "==")
-                  [ Apply (0, 0) (Ref (0, 0) "%") [expr, Lit (0, 0) $ LiteralInt 0],
+                  [ Apply (0, 0) (Ref (0, 0) "%") [expr, Lit (0, 0) $ LiteralInt 2],
                     Lit (0, 0) $ LiteralInt 0
                   ]
               )
