@@ -15,6 +15,11 @@ import Text.Megaparsec (ParseErrorBundle)
 import qualified Database.PostgreSQL.Simple as PG
 import LuQL.Runner (SqlRuntimeRow(..))
 import Tests.Utils (models)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
+import qualified Data.Text.Encoding as Text
+import System.Directory (doesFileExist)
+import GHC.Stack (HasCallStack)
 
 spec :: Spec
 spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
@@ -81,53 +86,63 @@ withDatabase action = do
   _ <- action conn
   PG.close conn
 
-itMatchesSnapshot :: String -> Text -> TestDefM '[PG.Connection]  () ()
+shouldMatchSnapshot :: (HasCallStack, Show a) => a -> String -> IO ()
+shouldMatchSnapshot actualToShow filepath = do
+  let actual = actualToShow & ppShow & Text.pack
+  shouldMatchSnapshot' actual filepath
+
+
+shouldMatchSnapshot' :: HasCallStack => Text -> String -> IO ()
+shouldMatchSnapshot' actual filepath = do
+  targetPathExists <- doesFileExist filepath
+  if not targetPathExists
+    then Text.writeFile filepath actual
+    else do
+      expectedText <- Text.readFile filepath
+      Text.writeFile filepath actual
+      actual `shouldBe` expectedText
+
+itMatchesSnapshot :: HasCallStack => String -> Text -> TestDefM '[PG.Connection] () ()
 itMatchesSnapshot name program = describe name $ do
-  it "0_Raw" $
-    pureGoldenTextFile [i|test/.golden/Lang/#{name}/0_Raw.golden|] $
-      program
+  itWithOuter "matches the snapshots" $ \conn -> do
+    context "original program" $
+      program `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/0_Raw.golden|]
 
-  let parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
-      parsedProgram =
-        parseQuery program
+    let parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
+        parsedProgram =
+          parseQuery program
 
-  it "1_Parser" $
-    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/1_Parser.golden|] $
-      parsedProgram
+    context "parsed program" $
+      parsedProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/1_Parser.golden|]
 
-  let compiledProgram :: Either [Error] CompiledQuery
-      compiledProgram =
-        parsedProgram
-          & either (error . show) id
-          & compileProgram models
-  it "2_Compiler" $
-    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/2_Compiler.golden|] $
-      compiledProgram
+    let compiledProgram :: Either [Error] CompiledQuery
+        compiledProgram =
+          parsedProgram
+            & either (error . show) id
+            & compileProgram models
 
-  let partialSqlQuery :: LuQL.SqlGeneration.PartialQuery
-      partialSqlQuery =
-        compiledProgram
-          & either (error . show) id
-          & (.unCompiledQuery)
-          & LuQL.SqlGeneration.compileStatements
-  it "3_SqlGeneration" $
-    goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/3_SqlGeneration.golden|] $
+    context "compiled program" $
+      compiledProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/2_Compiler.golden|]
+
+    let partialSqlQuery :: LuQL.SqlGeneration.PartialQuery
+        partialSqlQuery =
+          compiledProgram
+            & either (error . ppShow) id
+            & (.unCompiledQuery)
+            & LuQL.SqlGeneration.compileStatements
+
+    context "sql query in haskell" $
+      partialSqlQuery `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/3_SqlGeneration.golden|]
+
+    rawSqlQuery <-
       partialSqlQuery
+        & renderPartialQuery
+        & renderSqlBuilder conn
 
-  beforeAllWith (\conn -> do
-      rawSqlQuery <-
-        partialSqlQuery
-          & renderPartialQuery
-          & renderSqlBuilder conn
-      pure rawSqlQuery
-    ) $ do
-    itWithOuter "4_Render" $ \(rawSqlQuery :: PG.Query) -> do
-      pureGoldenByteStringFile [i|test/.golden/Lang/#{name}/4_Render.golden|] $
-        PG.fromQuery rawSqlQuery
+    context "raw sql query" $
+      (Text.decodeUtf8 $ PG.fromQuery rawSqlQuery) `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/4_Render.golden|]
 
-    itWithAll "5_Run" (\(HCons rawSqlQuery (HCons conn HNil) :: HList '[PG.Query, PG.Connection]) () -> do
-      queryResults <- PG.query_ @SqlRuntimeRow conn rawSqlQuery
-      pure $ goldenPrettyShowInstance [i|test/.golden/Lang/#{name}/5_Run.golden|] $
-        queryResults
-      )
+    queryResults <- PG.query_ @SqlRuntimeRow conn rawSqlQuery
+    context "query results" $
+      queryResults `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/5_Run.golden|]
 

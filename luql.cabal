@@ -79,6 +79,7 @@ test-suite luql-test
   build-depends:
     , sydtest
     , pretty-simple
+    , directory
   if !flag(ghci-load-test-with-lib)
     build-depends: luql
 
