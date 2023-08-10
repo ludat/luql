@@ -7,13 +7,12 @@ module LuQL.Parser where
 
 import Control.Monad (void)
 import Data.Char (isAlphaNum)
-import Data.Either.Combinators (mapLeft)
+import Control.Monad.Combinators.Expr
 import Data.Function ((&))
 import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import LuQL.Types
-import Safe (headMay, lastMay)
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -40,6 +39,7 @@ type instance ExprE _ "ctx" Raw = (Int, Int)
 type instance ExprE "apply" "function" Raw = (QueryExpression Raw)
 
 type instance ExprE "ext" "ext" Raw = Void
+
 
 spaceConsumer :: Parser ()
 spaceConsumer =
@@ -79,7 +79,9 @@ operators :: [Text]
 operators =
   ["<=", "<", ">=", ">", "==", "!=", "&&", "||", "*", "/", "%", "+", "-", "??"]
 
-type WithPosition a = ((Int, Int), a)
+type Position = (Int, Int)
+
+type WithPosition a = (Position, a)
 
 withPosition :: Parser a -> Parser (WithPosition a)
 withPosition p = do
@@ -88,46 +90,42 @@ withPosition p = do
   finalPosition <- getOffset
   pure ((initialPosition, finalPosition), result)
 
--- TODO esta locura se puede reemplazar con
--- Control.Monad.Combinators.makeExprParser del paquete parser-combinators
 expressionParser :: Parser (QueryExpression Raw)
 expressionParser = do
-  firstExpr <- withPosition simpleExpressionParser
-  opsExprs <-
-    concat
-      <$> many
-        ( do
-            op <- withPosition $ choice $ fmap symbol operators
-            expr <- withPosition simpleExpressionParser
-            pure [Left op, Right expr]
+  makeExprParser (simpleExpressionParser) [
+      [ infixL "??"
+      ],
+      [ infixL "<="
+      , infixL ">="
+      , infixL "<"
+      , infixL ">"
+      ],
+      [ infixL "=="
+      , infixL "!="
+      ],
+      [ infixL "&&"
+      , infixL "||"
+      ],
+      [ infixL "**"
+      ],
+      [ infixL "*"
+      , infixL "/"
+      , infixL "%"
+      ],
+      [ infixL "+"
+      , infixL "-"
+      ]
+    ]
+  where
+    infixL :: Text -> Operator Parser (QueryExpression Raw)
+    infixL op = InfixL $ do
+      (pos, _) <- withPosition $ symbol op
+      pure (\expr1 expr2 ->
+        Apply
+          (expr1 & getPos & fst, expr2 & getPos & snd)
+          (Ref pos op)
+          [expr1, expr2]
         )
-  pure $ replaceOpWithApply operators $ Right firstExpr : opsExprs
-
-replaceOpWithApply ::
-  [Text] ->
-  [Either (WithPosition Text) (WithPosition (QueryExpression Raw))] ->
-  QueryExpression Raw
-replaceOpWithApply _ [Right (_pos, expr)] = expr
-replaceOpWithApply ops@(op : restOps) cosos =
-  let firstPos =
-        headMay cosos
-          & ( \case
-                Nothing -> undefined
-                Just (Left ((pos, _), _)) -> pos
-                Just (Right ((pos, _), _)) -> pos
-            )
-      lastPos =
-        lastMay cosos
-          & ( \case
-                Nothing -> undefined
-                Just (Left ((_, pos), _)) -> pos
-                Just (Right ((_, pos), _)) -> pos
-            )
-   in case splitOn ((== Left op) . mapLeft snd) cosos of
-        Just (left, Left (posO, _op), right) -> Apply (firstPos, lastPos) (Ref posO op) [replaceOpWithApply restOps left, replaceOpWithApply ops right]
-        Just (_left, Right (_posO, _expr), _right) -> error "imposible" -- porque estoy buscando un left arriba, deberia cambiar la funciona de abajo para mapear"
-        Nothing -> replaceOpWithApply restOps cosos
-replaceOpWithApply _ _ = error "the impossible happened"
 
 splitOn :: (a -> Bool) -> [a] -> Maybe ([a], a, [a])
 splitOn f xs =
@@ -311,6 +309,14 @@ letParser = do
 statementParser :: Parser (QueryStatement Raw)
 statementParser = do
   fromParser <|> whereParser <|> returnParser <|> letParser <|> joinParser <|> groupByParser <|> orderByParser
+
+getPos :: QueryExpression Raw -> (Int, Int)
+getPos (Lit md _) = md
+getPos (Prop md _ _) = md
+getPos (Ref md _) = md
+getPos (Apply md _ _) = md
+getPos (RawSql md _) = md
+getPos (If md _ _ _) = md
 
 parser :: Parser RawQuery
 parser = do

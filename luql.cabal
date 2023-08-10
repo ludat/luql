@@ -36,9 +36,9 @@ common deps
     , base
     , bytestring
     , containers
-    , either
     , megaparsec
     , mtl
+    , parser-combinators
     , postgresql-query
     , postgresql-simple
     -- , pretty-simple

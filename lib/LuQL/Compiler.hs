@@ -541,14 +541,6 @@ compileExpression (If _pos condExpr thenExpr elseExpr) = do
 
   pure $ If (getType tcThenExpr) tcCondExpr tcThenExpr tcElseExpr
 
-getPos :: QueryExpression Raw -> (Int, Int)
-getPos (Lit md _) = md
-getPos (Prop md _ _) = md
-getPos (Ref md _) = md
-getPos (Apply md _ _) = md
-getPos (RawSql md _) = md
-getPos (If md _ _ _) = md
-
 getType :: QueryExpression Compiled -> RuntimeType
 getType (Lit ty _) = ty
 getType (Ref ty _) = ty
