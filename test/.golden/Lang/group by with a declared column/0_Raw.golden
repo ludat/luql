@@ -1,0 +1,7 @@
+let kept = 7
+let lost = 2
+group by kept {
+  let new = kept
+}
+order by new
+order by kept

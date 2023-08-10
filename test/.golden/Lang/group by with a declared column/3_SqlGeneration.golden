@@ -1,0 +1,46 @@
+PartialQuery
+  { fromTable =
+      Just
+        (SubqueryTable
+           PartialQuery
+             { fromTable =
+                 Just
+                   (SubqueryTable
+                      PartialQuery
+                        { fromTable = Nothing
+                        , selectedColumns =
+                            [ SelectNewColumn
+                                (LiteralInt 7) Identifier { fromIdentifier = "kept" }
+                            ]
+                        , wheres = []
+                        , joins = []
+                        , groupBy = Nothing
+                        , orderBy = []
+                        }
+                      Identifier { fromIdentifier = "t" })
+             , selectedColumns =
+                 [ SelectFromTable Identifier { fromIdentifier = "t" }
+                 , SelectNewColumn
+                     (LiteralInt 2) Identifier { fromIdentifier = "lost" }
+                 ]
+             , wheres = []
+             , joins = []
+             , groupBy = Nothing
+             , orderBy = []
+             }
+           Identifier { fromIdentifier = "t" })
+  , selectedColumns =
+      [ SelectColumnFromTable (QualifiedIdentifier (Just "t") "kept")
+      , SelectNewColumn
+          (Ref Identifier { fromIdentifier = "kept" })
+          Identifier { fromIdentifier = "new" }
+      ]
+  , wheres = []
+  , joins = []
+  , groupBy =
+      Just
+        GroupByDefinition
+          { byColumns = [ Ref Identifier { fromIdentifier = "kept" } ] }
+  , orderBy =
+      [ ( Ref Identifier { fromIdentifier = "kept" } , Nothing ) ]
+  }

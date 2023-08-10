@@ -72,6 +72,17 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
       }
     |]
 
+  itMatchesSnapshot "group by with a declared column"
+    [__i|
+      let kept = 7
+      let lost = 2
+      group by kept {
+        let new = kept
+      }
+      order by new
+      order by kept
+    |]
+
   itMatchesSnapshot "a single let with a number"
     [__i|
       let a = 23

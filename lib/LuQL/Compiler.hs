@@ -300,6 +300,23 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
               ]
           ExprExt (ComputedModelDefinition _ _) ->
             pure $ acc ++ [(name, expression)]
+          ExprExt (ComputedColumn t columnDefinition) ->
+            let relevantColumns =
+                  compiledColumns
+                  & mapMaybe (\case
+                    (ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier Nothing n))), _) -> Just n
+                    _ -> Nothing
+                    )
+            in case (tagOrDiscard, t) of
+              (Tag, _) ->
+                if name `elem` relevantColumns
+                  then pure $ acc ++ [(name, ExprExt $ ComputedColumn (KeptByGroupBy t) columnDefinition)]
+                  else pure $ acc ++ [(name, ExprExt $ ComputedColumn t columnDefinition)]
+              (Discard, KeptByGroupBy t') ->
+                  pure $ acc ++ [(name, ExprExt $ ComputedColumn t' columnDefinition)]
+              (Discard, _) ->
+                pure acc
+
           _ -> pure acc
         )
         ([] :: [(Text, QueryExpression Compiled)])
