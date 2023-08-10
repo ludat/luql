@@ -1,0 +1,4 @@
+from Cities
+group by city.country_id {
+  let max_city = max(city.country_id)
+}

@@ -35,6 +35,18 @@ Right
               , Nothing
               )
             ]
-            [ Let () "count" (RawSql AnyType [ Left "count(*)" ]) ]
+            [ Let
+                ()
+                "max_city"
+                (Apply
+                   IntType
+                   ( "max" , [ KeptByGroupBy IntType ] )
+                   [ ExprExt
+                       (ComputedColumn
+                          (KeptByGroupBy IntType)
+                          ColumnDefinition
+                            { column = QualifiedIdentifier (Just "city") "country_id" })
+                   ])
+            ]
         ]
     }

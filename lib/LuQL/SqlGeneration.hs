@@ -237,6 +237,7 @@ compileExpression (T.Apply _ ((name, paramTypes)) params) =
         ("<=", _, _) -> Call InfixNotation "<=" compiledParams
         (">=", _, _) -> Call InfixNotation ">=" compiledParams
         ("char_length", [_], [_]) -> Call DefaultNotation "char_length" compiledParams
+        ("max", [_], [_]) -> Call DefaultNotation "max" compiledParams
         ("??", [val, defaultVal], [_, _]) ->
           RawSql
             [ Left

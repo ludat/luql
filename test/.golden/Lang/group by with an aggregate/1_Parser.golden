@@ -1,0 +1,20 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ From ( 0 , 11 ) ( Nothing , Ref ( 5 , 11 ) "Cities" )
+        , GroupBy
+            ( 12 , 18 )
+            [ ( Prop ( 25 , 37 ) (Ref ( 21 , 25 ) "city") "country_id"
+              , Nothing
+              )
+            ]
+            [ Let
+                ( 41 , 76 )
+                "max_city"
+                (Apply
+                   ( 59 , 76 )
+                   (Ref ( 56 , 59 ) "max")
+                   [ Prop ( 64 , 75 ) (Ref ( 60 , 64 ) "city") "country_id" ])
+            ]
+        ]
+    }

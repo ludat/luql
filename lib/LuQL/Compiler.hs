@@ -263,12 +263,13 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
   pure
     $ [Join () (otherModelName, newModelToJoin) joinExpression]
 compileStatement (GroupBy _ groupByColumns letStatements) = do
-  oldTypeInfo <- get
-  tg <- compileAndSetTheNewTypeInfo oldTypeInfo groupByColumns
+  _ <- compileAndSetTheNewTypeInfo Tag groupByColumns
   definitions <- mconcat <$> mapM compileStatement letStatements
+  tg <- compileAndSetTheNewTypeInfo Discard groupByColumns
   pure [GroupBy () tg definitions]
   where
-    compileAndSetTheNewTypeInfo oldTypeInfo columns = do
+    compileAndSetTheNewTypeInfo tagOrDiscard columns = do
+      oldTypeInfo <- get
       compiledColumns <- forM columns $ \(column, name) -> do
         compiledExpression <- compileExpression column
         pure (compiledExpression, name)
@@ -285,7 +286,13 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
                   & fmap Identifier
             pure $ acc ++
               [ (name, ExprExt (ComputedModel
-                  (ModelType (propsMap & Map.filterWithKey (\k _ -> k `elem` relevantColumns)))
+                  (ModelType (propsMap & Map.mapMaybeWithKey (\k v ->
+                      case (tagOrDiscard, v) of
+                        (Tag, _) -> if k `elem` relevantColumns
+                          then Just $ KeptByGroupBy v
+                          else Just $ v
+                        (Discard, KeptByGroupBy v') -> Just $ v'
+                        (Discard, _) -> Nothing)))
                   modelName
                   tableName
                   (relatedTables & Map.filter (\(_, column) -> column `elem` relevantColumns)))
@@ -328,6 +335,9 @@ compileStatement (OrderBy _ exprs) = do
     pure (compiledExpr, dir)
   pure [OrderBy () tExprs]
 
+data TagOrDiscard = Tag | Discard
+  deriving (Show, Eq)
+
 matchesType :: RuntimeType -> RuntimeType -> Bool
 matchesType v r =
   case (v, r) of
@@ -335,6 +345,9 @@ matchesType v r =
     (_, AnyType) -> True
     (UnknownType, _) -> True
     (_, UnknownType) -> True
+    (KeptByGroupBy a, KeptByGroupBy b) -> a == b
+    (KeptByGroupBy a, b) -> matchesType a b
+    (_, KeptByGroupBy _) -> False
     (a, b) -> a == b
 
 class (Monad m) => HasTypeInfo m where
@@ -371,6 +384,7 @@ data RuntimeType
   | ModelType (Map Identifier RuntimeType)
   | ModelDefinitionType
   | FunctionType FunctionTypeChecker
+  | KeptByGroupBy RuntimeType
   deriving (Eq, Show)
 
 newtype FunctionTypeChecker
@@ -476,7 +490,6 @@ compileExpression e@(Prop pos expr propName) = do
         pure $
           ExprExt $
             ExprCompilationFailed e
--- pure $ Prop malo tExpr propName
 compileExpression (Ref originalPosition name) = do
   if name == "_"
     then do
@@ -634,6 +647,17 @@ nativeFunctions =
               addError pos [iii|?? expects two parameters|]
               pure ([], IntType, undefined)
       )
+      , ( "max",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1)] -> do
+              pure ([e1], IntType, ("max", [getType e1]))
+            _ -> do
+              addError pos [iii|max expects one parameter|]
+              pure ([], IntType, undefined)
+      )
       -- , ("sum", FunctionType RuntimeFunction
       --     { rFuncName = "sum"
       --     , rFuncNotation = DefaultNotation
@@ -652,22 +676,6 @@ nativeFunctions =
       --   )
       -- , ("avg", FunctionType RuntimeFunction
       --     { rFuncName = "avg"
-      --     , rFuncNotation = DefaultNotation
-      --     , rFuncCheckTypes = \pos paramExprs -> do
-      --         tExprs <- forM paramExprs $ \e -> do
-      --           (getPos e,) <$> compileExpression e
-      --         case tExprs of
-      --           [(_p, e)] -> do
-      --             unless (getType e `matchesType` IntType) $
-      --               addError pos [iii|expected a number but got #{getType e}|]
-      --             pure ([e], ValueMetadata IntType LiteralSource)
-      --           _ -> do
-      --             addError pos [iii|sum expects one argument|]
-      --             pure ([], ValueMetadata IntType ErrorSource)
-      --     }
-      --   )
-      -- , ("max", FunctionType RuntimeFunction
-      --     { rFuncName = "max"
       --     , rFuncNotation = DefaultNotation
       --     , rFuncCheckTypes = \pos paramExprs -> do
       --         tExprs <- forM paramExprs $ \e -> do

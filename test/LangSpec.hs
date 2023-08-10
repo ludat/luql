@@ -18,7 +18,7 @@ import Tests.Utils (models)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Encoding as Text
-import System.Directory (doesFileExist)
+import System.Directory (doesFileExist, createDirectoryIfMissing)
 import GHC.Stack (HasCallStack)
 
 spec :: Spec
@@ -64,6 +64,14 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
       }
     |]
 
+  itMatchesSnapshot "group by with an aggregate"
+    [__i|
+      from Cities
+      group by city.country_id {
+        let max_city = max(city.country_id)
+      }
+    |]
+
   itMatchesSnapshot "a single let with a number"
     [__i|
       let a = 23
@@ -105,6 +113,7 @@ shouldMatchSnapshot' actual filepath = do
 itMatchesSnapshot :: HasCallStack => String -> Text -> TestDefM '[PG.Connection] () ()
 itMatchesSnapshot name program = describe name $ do
   itWithOuter "matches the snapshots" $ \conn -> do
+    createDirectoryIfMissing True ("test/.golden/Lang/" <> name)
     context "original program" $
       program `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/0_Raw.golden|]
 
