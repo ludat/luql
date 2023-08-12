@@ -777,7 +777,7 @@ nativeFunctions =
             [(_p1, e1)] -> do
               pure ([e1], IntType, ("extract_month", [getType e1]))
             _ -> do
-              addError pos [iii|extract_month needs one parameter|]
+              addError pos [iii|extract_year needs one parameter|]
               pure ([], IntType, undefined)
       )
       , ( "extract_month",
