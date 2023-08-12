@@ -264,10 +264,31 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
     $ [Join () (otherModelName, newModelToJoin) joinExpression]
 compileStatement (GroupBy _ groupByColumns letStatements) = do
   _ <- compileAndSetTheNewTypeInfo Tag groupByColumns
-  definitions <- mconcat <$> mapM compileStatement letStatements
+  definitions <- mconcat <$> mapM compileStatementAndTag letStatements
   tg <- compileAndSetTheNewTypeInfo Discard groupByColumns
   pure [GroupBy () tg definitions]
   where
+    compileStatementAndTag stmt = do
+      case stmt of
+        Let _ name _ -> do
+          ret <- compileStatement stmt
+          modifyTypeInfo $ \ty ->
+            ty {
+              variablesInScope = (
+                ty.variablesInScope
+                & fmap (\(n, v) -> if n /= name
+                  then (n, v)
+                  else case v of
+                    ExprExt (ComputedColumn t columnDefinition) ->
+                      (n, ExprExt $ ComputedColumn (KeptByGroupBy t) columnDefinition)
+                    _ ->
+                      (n, v)
+                  )
+              )
+            }
+          pure ret
+        _ ->
+          compileStatement stmt
     compileAndSetTheNewTypeInfo tagOrDiscard columns = do
       oldTypeInfo <- get
       compiledColumns <- forM columns $ \(column, name) -> do
@@ -462,13 +483,13 @@ compileExpression (Lit _ (LiteralInt n)) = pure $ Lit (lit IntType) $ LiteralInt
 compileExpression (Lit _ (LiteralFloat n)) = pure $ Lit (lit FloatType) $ LiteralFloat n
 compileExpression (Lit _ (LiteralBoolean b)) = pure $ Lit (lit BooleanType) $ LiteralBoolean b
 compileExpression (Lit _ (LiteralNull)) = pure $ Lit (lit NullType) LiteralNull
-compileExpression e@(Prop pos expr propName) = do
+compileExpression expression@(Prop pos expr propName) = do
   tExpr <- compileExpression expr
   case tExpr of
     (ExprExt (ComputedModel (ModelType m) n _ _)) -> case Map.lookup (Identifier propName) m of
       Nothing -> do
         addError pos [iii|#{expr} no tiene una propiedad: #{propName}|]
-        pure $ ExprExt $ ExprCompilationFailed $ e
+        pure $ ExprExt $ ExprCompilationFailed $ expression
       Just ty -> do
         pure $
           ExprExt $
@@ -486,9 +507,20 @@ compileExpression e@(Prop pos expr propName) = do
                     Lit (0, 0) $ LiteralInt 0
                   ]
               )
+          "in" -> do
+            let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
+                  tExprs <- forM paramExprs $ \e -> do
+                    (getPos e,) <$> compileExpression e
+                  case tExprs of
+                    [(_p1, e1)] -> do
+                      pure ([tExpr, e1], BooleanType, ("in", [getType tExpr, getType e1]))
+                    _ -> do
+                      addError pos [iii|max expects one parameter|]
+                      pure ([], IntType, undefined)
+            pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
           _ -> do
             addError pos [iii|Int doesn't have prop '#{propName}'|]
-            pure $ ExprExt $ ExprCompilationFailed e
+            pure $ ExprExt $ ExprCompilationFailed expression
       StringType -> do
         case propName of
           "length" -> do
@@ -501,12 +533,48 @@ compileExpression e@(Prop pos expr propName) = do
               )
           _ -> do
             addError pos [iii|Int doesn't have prop '#{propName}'|]
-            pure $ ExprExt $ ExprCompilationFailed e
+            pure $ ExprExt $ ExprCompilationFailed expression
+      DateType -> do
+        case propName of
+          "between" -> do
+            let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
+                  tExprs <- forM paramExprs $ \e -> do
+                    (getPos e,) <$> compileExpression e
+                  case tExprs of
+                    [(p1, e1), (p2, e2)] -> do
+                      unless (getType e1 `matchesType` StringType) $
+                        addError p1 [iii|expected type is String but got #{getType e1}|]
+                      unless (getType e2 `matchesType` StringType) $
+                        addError p2 [iii|expected type is String but got #{getType e2}|]
+                      pure ([tExpr, e1, e2], BooleanType, ("date_between", [getType tExpr, getType e1, getType e2]))
+                    _ -> do
+                      addError pos [iii|max expects one parameter|]
+                      pure ([], IntType, undefined)
+            pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
+          "year" -> do
+            compileExpression
+              ( Apply
+                  (0, 0)
+                  (Ref (0, 0) "extract_year")
+                  [ expr
+                  ]
+              )
+          "month" -> do
+            compileExpression
+              ( Apply
+                  (0, 0)
+                  (Ref (0, 0) "extract_month")
+                  [ expr
+                  ]
+              )
+          _ -> do
+            addError pos [iii|Int doesn't have prop '#{propName}'|]
+            pure $ ExprExt $ ExprCompilationFailed expression
       _ -> do
         addError pos [iii|1 eso no tiene una propiedad: #{getType tExpr}|]
         pure $
           ExprExt $
-            ExprCompilationFailed e
+            ExprCompilationFailed expression
 compileExpression (Ref originalPosition name) = do
   if name == "_"
     then do
@@ -616,6 +684,7 @@ nativeFunctions =
       ("*", binaryOperator "*"),
       ("+", binaryOperator "+"),
       ( "-", binaryOperator "-"),
+      ("/", binaryOperator "/"),
       ("%", binaryOperator "%"),
       ("&&", binaryOperator "&&"),
       ("<", comparisonFunction "<"),
@@ -667,22 +736,72 @@ nativeFunctions =
               addError pos [iii|max expects one parameter|]
               pure ([], IntType, undefined)
       )
-      -- , ("sum", FunctionType RuntimeFunction
-      --     { rFuncName = "sum"
-      --     , rFuncNotation = DefaultNotation
-      --     , rFuncCheckTypes = \pos paramExprs -> do
-      --         tExprs <- forM paramExprs $ \e -> do
-      --           (getPos e,) <$> compileExpression e
-      --         case tExprs of
-      --           [(_p, e)] -> do
-      --             unless (getType e `matchesType` IntType) $
-      --               addError pos [iii|expected a number but got #{getType e}|]
-      --             pure ([e], ValueMetadata IntType LiteralSource)
-      --           _ -> do
-      --             addError pos [iii|sum expects one argument|]
-      --             pure ([], ValueMetadata IntType ErrorSource)
-      --     }
-      --   )
+      , ( "!",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1)] -> do
+              pure ([e1], BooleanType, ("!", [getType e1]))
+            _ -> do
+              addError pos [iii|max expects one parameter|]
+              pure ([], IntType, undefined)
+      )
+      , ( "sum",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1)] -> do
+              pure ([e1], IntType, ("sum", [getType e1]))
+            _ -> do
+              addError pos [iii|max expects one parameter|]
+              pure ([], IntType, undefined)
+      )
+      , ( "sum_if",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1), (_p2, e2)] -> do
+              pure ([e1, e2], IntType, ("sum_if", [getType e1, getType e2]))
+            _ -> do
+              addError pos [iii|sum_if expects two parameter|]
+              pure ([], IntType, undefined)
+      )
+      , ( "extract_year",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1)] -> do
+              pure ([e1], IntType, ("extract_month", [getType e1]))
+            _ -> do
+              addError pos [iii|extract_month needs one parameter|]
+              pure ([], IntType, undefined)
+      )
+      , ( "extract_month",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1)] -> do
+              pure ([e1], IntType, ("extract_month", [getType e1]))
+            _ -> do
+              addError pos [iii|extract_month needs one parameter|]
+              pure ([], IntType, undefined)
+      )
+      , ( "count_distinct",
+        FunctionTypeChecker $ \pos paramExprs -> do
+          tExprs <- forM paramExprs $ \e -> do
+            (getPos e,) <$> compileExpression e
+          case tExprs of
+            [(_p1, e1)] -> do
+              pure ([e1], IntType, ("count_distinct", [getType e1]))
+            _ -> do
+              addError pos [iii|count_distinct needs one parameter|]
+              pure ([], IntType, undefined)
+      )
       -- , ("avg", FunctionType RuntimeFunction
       --     { rFuncName = "avg"
       --     , rFuncNotation = DefaultNotation

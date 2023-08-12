@@ -93,6 +93,8 @@ withPosition p = do
 expressionParser :: Parser (QueryExpression Raw)
 expressionParser = do
   makeExprParser (simpleExpressionParser) [
+      [ prefix "!"
+      ],
       [ infixL "??"
       ],
       [ infixL "<="
@@ -125,6 +127,16 @@ expressionParser = do
           (expr1 & getPos & fst, expr2 & getPos & snd)
           (Ref pos op)
           [expr1, expr2]
+        )
+
+    prefix :: Text -> Operator Parser (QueryExpression Raw)
+    prefix op = Prefix $ do
+      (pos, _) <- withPosition $ symbol op
+      pure (\expr ->
+        Apply
+          (expr & getPos)
+          (Ref pos op)
+          [expr]
         )
 
 splitOn :: (a -> Bool) -> [a] -> Maybe ([a], a, [a])
@@ -186,13 +198,12 @@ rawSqlParser = do
 
 applyParser :: Parser [QueryExpression Raw]
 applyParser = do
-  try $ between (symbol "(") (symbol ")") (expressionParser `sepBy` symbol ",")
+  between (symbol "(") (symbol ")") (expressionParser `sepBy` symbol ",")
 
 propParser :: Parser Text
-propParser =
-  try $ do
-    _ <- char '.'
-    identifierParser
+propParser = do
+  _ <- char '.'
+  identifierParser
 
 stringParser :: Parser (QueryExpression Raw)
 stringParser = lexeme $ do

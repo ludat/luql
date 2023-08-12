@@ -228,6 +228,7 @@ compileExpression (T.Apply _ ((name, paramTypes)) params) =
         ("!=", [_, _], [_, _]) -> Call InfixNotation "<>" compiledParams
         ("-", [v1, v2], [DateType, DateType]) -> RawSql [Left "(", Right v1, Left " - ", Right v2, Left ")", Left [i| * interval '1' day|]]
         ("-", [_, _], [_, _]) -> Call InfixNotation "-" compiledParams
+        ("/", [_, _], [_, _]) -> Call InfixNotation "/" compiledParams
         ("*", [_, _], [_, _]) -> Call InfixNotation "*" compiledParams
         ("+", [_, _], [_, _]) -> Call InfixNotation "+" compiledParams
         ("%", [_, _], [IntType, IntType]) -> Call InfixNotation "%" compiledParams
@@ -237,25 +238,24 @@ compileExpression (T.Apply _ ((name, paramTypes)) params) =
         ("<=", _, _) -> Call InfixNotation "<=" compiledParams
         (">=", _, _) -> Call InfixNotation ">=" compiledParams
         ("char_length", [_], [_]) -> Call DefaultNotation "char_length" compiledParams
+        ("date_between", [d, s1, s2], [DateType, StringType, StringType]) ->
+          RawSql [Right d, Left " BETWEEN ", Right s1, Left " AND ", Right s2]
+        ("extract_month", [val], [DateType]) ->
+          RawSql [Left "extract(month from ", Right val, Left ")"]
+        ("extract_year", [val], [DateType]) ->
+          RawSql [Left "extract(year from ", Right val, Left ")"]
         ("max", [_], [_]) -> Call DefaultNotation "max" compiledParams
-        ("??", [val, defaultVal], [_, _]) ->
-          RawSql
-            [ Left
-                [i|
-      CASE
-        WHEN |],
-              Right val,
-              Left [i| IS NOT NULL THEN |],
-              Right val,
-              Left
-                [i|
-        ELSE |],
-              Right defaultVal,
-              Left
-                [i|
-      END
-        |]
-            ]
+        ("sum", [_], [_]) -> Call DefaultNotation "sum" compiledParams
+        ("sum_if", [cond, val], [BooleanType, _]) ->
+          RawSql [Left "sum(CASE WHEN ", Right cond, Left " THEN ", Right val, Left " ELSE 0 END)"]
+        ("count_distinct", [val], [_]) ->
+          RawSql [Left "count(distinct", Right val, Left ")"]
+        ("in", [val, list], [_, _]) -> -- TODO: Typecheck this
+          RawSql [Right val, Left " IN ", Right list]
+        ("!", [val], [BooleanType]) ->
+          RawSql [Left "NOT ", Right val]
+        ("??", [_, _], [_, _]) ->
+          Call DefaultNotation "COALESCE" compiledParams
         _ ->
           error
             [__i|unknown function: #{name} con
