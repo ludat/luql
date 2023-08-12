@@ -24,7 +24,7 @@ Right
             ()
             [ ( ExprExt
                   (ComputedColumn
-                     IntType
+                     (KeptByGroupBy IntType)
                      ColumnDefinition { column = QualifiedIdentifier Nothing "new" })
               , Nothing
               )
