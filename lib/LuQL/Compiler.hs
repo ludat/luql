@@ -775,7 +775,7 @@ nativeFunctions =
             (getPos e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
-              pure ([e1], IntType, ("extract_month", [getType e1]))
+              pure ([e1], IntType, ("extract_year", [getType e1]))
             _ -> do
               addError pos [iii|extract_year needs one parameter|]
               pure ([], IntType, undefined)
