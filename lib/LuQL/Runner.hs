@@ -15,11 +15,12 @@ import Data.Scientific (Scientific)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8)
-import Data.Time (CalendarDiffTime, LocalTime, ZonedTime)
+import Data.Time (CalendarDiffTime, LocalTime, ZonedTime, scaleCalendarDiffTime)
 import Data.Time.Calendar (Day)
 import qualified Database.PostgreSQL.Simple.FromField as PG
 import qualified Database.PostgreSQL.Simple.FromRow as PG
 import GHC.Generics (Generic)
+import qualified Data.ByteString as BS
 
 newtype SqlRuntimeRow
   = SqlRuntimeRow (Map Text SqlRuntimeValue)
@@ -52,11 +53,16 @@ parseValue = do
 
       ("bool", Just _) -> SqlBool <$> PG.fromField field maybeContenido
 
+      ("int2", Just _) -> SqlInt <$> PG.fromField field maybeContenido
       ("int4", Just _) -> SqlInt <$> PG.fromField field maybeContenido
       ("int8", Just _) -> SqlInt <$> PG.fromField field maybeContenido
+      ("float4", Just _) -> SqlFloat <$> PG.fromField field maybeContenido
+      ("float8", Just _) -> SqlFloat <$> PG.fromField field maybeContenido
       ("numeric", Just _) -> SqlFloat <$> PG.fromField field maybeContenido
 
-      ("interval", Just _) -> SqlInterval <$> PG.fromField field maybeContenido
+      ("interval", Just v) -> case BS.take 2 v of
+        "P-" -> SqlInterval <$> scaleCalendarDiffTime (-1) <$> PG.fromField field (Just $ BS.filter (/= 45) $ v)
+        _ -> SqlInterval <$> PG.fromField field maybeContenido
 
       ("date", Just _) -> SqlDate <$> PG.fromField field maybeContenido
       ("timestamp", Just _) -> SqlTimestamp <$> PG.fromField field maybeContenido
