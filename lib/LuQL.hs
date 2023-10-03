@@ -1,8 +1,10 @@
 module LuQL where
 
 import Data.String.Interpolate (iii)
+
 import Database.PostgreSQL.Query
-import qualified Database.PostgreSQL.Query as PG
+import Database.PostgreSQL.Query qualified as PG
+
 import LuQL.Compiler
 import LuQL.Parser
 import LuQL.Render

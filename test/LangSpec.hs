@@ -1,25 +1,34 @@
 {-# LANGUAGE GADTs #-}
-module LangSpec (spec) where
+module LangSpec
+    ( spec
+    ) where
 
 import Data.Function ((&))
 import Data.String.Interpolate
 import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Text.IO qualified as Text
 import Data.Void (Void)
-import qualified Database.PostgreSQL.Simple.Types as PG
+
+import Database.PostgreSQL.Simple qualified as PG
+import Database.PostgreSQL.Simple.Types qualified as PG
+
+import GHC.Stack (HasCallStack)
+
 import LuQL.Compiler
 import LuQL.Parser
 import LuQL.Render
-import qualified LuQL.SqlGeneration
+import LuQL.Runner (SqlRuntimeRow (..))
+import LuQL.SqlGeneration qualified
+
+import System.Directory (createDirectoryIfMissing, doesFileExist)
+
 import Test.Syd
-import Text.Megaparsec (ParseErrorBundle)
-import qualified Database.PostgreSQL.Simple as PG
-import LuQL.Runner (SqlRuntimeRow(..))
+
 import Tests.Utils (models)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import qualified Data.Text.Encoding as Text
-import System.Directory (doesFileExist, createDirectoryIfMissing)
-import GHC.Stack (HasCallStack)
+
+import Text.Megaparsec (ParseErrorBundle)
 
 spec :: Spec
 spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do

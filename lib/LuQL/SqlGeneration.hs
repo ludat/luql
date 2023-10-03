@@ -12,16 +12,19 @@ module LuQL.SqlGeneration where
 import Control.Monad.Identity (Identity (runIdentity))
 import Control.Monad.Reader
 import Control.Monad.State.Strict (StateT (runStateT), gets, modify')
-import qualified Data.Bifunctor
+
+import Data.Bifunctor qualified
 import Data.Function ((&))
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (isJust, mapMaybe)
-import Data.String.Interpolate (i, iii, __i)
+import Data.String.Interpolate (__i, i, iii)
 import Data.Text (Text)
+
 import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
+
 import LuQL.Compiler hiding (compileExpression, compileStatement)
-import qualified LuQL.Compiler as T
-import qualified LuQL.Types as T
+import LuQL.Compiler qualified as T
+import LuQL.Types qualified as T
 
 data SqlExpression
   = LiteralString Text

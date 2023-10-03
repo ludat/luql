@@ -12,7 +12,9 @@ module LuQL.Types where
 
 import Data.Kind (Constraint, Type)
 import Data.Text (Text)
+
 import Database.PostgreSQL.Simple.Types (Identifier)
+
 import GHC.Generics (Generic)
 import GHC.TypeLits
 

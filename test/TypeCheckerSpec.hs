@@ -3,12 +3,16 @@ module TypeCheckerSpec where
 
 import Data.Function ((&))
 import Data.String.Interpolate
+import Data.Text.Lazy qualified as TL
+
 import LuQL.Compiler
 import LuQL.Parser
+
 import Test.Syd
+
 import Tests.Utils (models)
+
 import Text.Pretty.Simple
-import qualified Data.Text.Lazy as TL
 
 spec :: Spec
 spec =  do

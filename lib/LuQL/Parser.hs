@@ -6,16 +6,20 @@
 module LuQL.Parser where
 
 import Control.Monad (void)
-import Data.Char (isAlphaNum)
 import Control.Monad.Combinators.Expr
+
+import Data.Char (isAlphaNum)
 import Data.Function ((&))
 import Data.Text (Text)
 import Data.Void (Void)
+
 import GHC.Generics (Generic)
+
 import LuQL.Types
+
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as L
+import Text.Megaparsec.Char.Lexer qualified as L
 
 type Parser = Parsec Void Text
 

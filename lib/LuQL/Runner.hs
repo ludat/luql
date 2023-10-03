@@ -7,9 +7,11 @@
 module LuQL.Runner where
 
 import Control.Monad (replicateM)
+
 import Data.Aeson (ToJSON)
+import Data.ByteString qualified as BS
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Scientific (Scientific)
 import Data.Text (Text)
@@ -17,10 +19,11 @@ import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8)
 import Data.Time (CalendarDiffTime, LocalTime, ZonedTime, scaleCalendarDiffTime)
 import Data.Time.Calendar (Day)
-import qualified Database.PostgreSQL.Simple.FromField as PG
-import qualified Database.PostgreSQL.Simple.FromRow as PG
+
+import Database.PostgreSQL.Simple.FromField qualified as PG
+import Database.PostgreSQL.Simple.FromRow qualified as PG
+
 import GHC.Generics (Generic)
-import qualified Data.ByteString as BS
 
 newtype SqlRuntimeRow
   = SqlRuntimeRow (Map Text SqlRuntimeValue)

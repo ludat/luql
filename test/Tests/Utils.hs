@@ -3,6 +3,7 @@ module Tests.Utils where
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Text (Text)
+
 import LuQL.Compiler
 import LuQL.Types
 

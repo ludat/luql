@@ -19,16 +19,20 @@ import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader
 import Control.Monad.State.Strict (StateT (..), get, modify', put)
+
 import Data.Function (on, (&))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.String.Interpolate (iii)
 import Data.Text (Text)
 import Data.Void (Void)
+
 import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
+
 import LuQL.Parser
 import LuQL.Types
+
 import Safe (headMay)
 
 data Compiled
@@ -494,6 +498,8 @@ compileExpression expression@(Prop pos expr propName) = do
         pure $
           ExprExt $
             ComputedColumn ty (ColumnDefinition $ qualifyIdentifier (Identifier n) $ Identifier propName)
+    (ExprExt (ComputedModelDefinition _ _)) ->
+      pure $ RawSql AnyType [Left "select centros.id from centro_de_costos centros left join centro_de_costos subcentros on centros.sub_centro_de_id=subcentros.id where centros.id= 227 or (centros.sub_centro_de_id = 227) or (subcentros.sub_centro_de_id = 227)"]
     -- -- TODO podria definirle propiedades a cosas que no sean tablas :thinking:
     _ -> case getType tExpr of
       IntType -> do

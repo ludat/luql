@@ -9,10 +9,12 @@ import Data.Maybe (catMaybes, fromJust)
 import Data.String (fromString)
 import Data.String.Interpolate (iii)
 import Data.Text (Text, unpack)
+
 import Database.PostgreSQL.Query (SqlBuilder)
-import qualified Database.PostgreSQL.Query as PG
-import qualified Database.PostgreSQL.Simple as PG
+import Database.PostgreSQL.Query qualified as PG
+import Database.PostgreSQL.Simple qualified as PG
 import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
+
 import LuQL.Compiler (FunctionNotation (..))
 import LuQL.SqlGeneration
 import LuQL.Types (OrderDirection (..))
