@@ -107,6 +107,11 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
         from Languages as l
         join Films
     |]
+  itMatchesSnapshot "a return keeps only that column"
+    [__i|
+        from Languages as l
+        return l.language_id
+    |]
 
 withDatabase :: (PG.Connection -> IO ()) -> IO ()
 withDatabase action = do

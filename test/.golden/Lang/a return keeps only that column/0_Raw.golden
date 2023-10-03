@@ -1,0 +1,2 @@
+from Languages as l
+return l.language_id

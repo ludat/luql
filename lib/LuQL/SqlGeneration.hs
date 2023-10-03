@@ -166,8 +166,17 @@ compileStatement q@(T.OrderBy _ exprs) = do
     query
       { orderBy = orderByExprs
       }
-compileStatement s@(T.Return _ _) = do
-  error [iii|compileStatement #{s}|]
+compileStatement s@(T.Return () expressions) = do
+  modifyPartialQuery $
+    \query ->
+      query
+        { selectedColumns =
+            expressions
+            & mapMaybe (\case
+                (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just table) name)))) ->
+                  Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ compileNameForTableColumn (Identifier table) (Identifier name))
+        , wheres = []
+        }
 compileStatement s@(T.StmtExt (T.StmtCompilationFailed _)) = do
   error [iii|compileStatement #{s}|]
 
@@ -198,7 +207,7 @@ isNewSubqueryIfNecessary expr pq =
     -- Aca podria optimizar porque si el nuevo let no usa los anteriores
     -- esta todo bien
     (T.Let _ _ _) -> thereIsAGroupBy || thereAreOtherLets
-    (T.Return _ _) -> undefined
+    (T.Return _ _) -> False
     (T.GroupBy _ _ _) -> thereIsAGroupBy || thereAreOtherLets || thereIsAJoin
     (T.OrderBy _ _) -> False
     (T.StmtExt (T.StmtCompilationFailed _)) -> undefined

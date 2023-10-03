@@ -1,0 +1,9 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ From ( 0 , 15 ) ( Just "l" , Ref ( 5 , 15 ) "Languages" )
+        , Return
+            ( 20 , 40 )
+            [ Prop ( 28 , 40 ) (Ref ( 27 , 28 ) "l") "language_id" ]
+        ]
+    }
