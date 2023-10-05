@@ -167,6 +167,7 @@ compileStatement q@(T.OrderBy _ exprs) = do
       { orderBy = orderByExprs
       }
 compileStatement s@(T.Return () expressions) = do
+  addNewSubqueryIfNecessary s
   modifyPartialQuery $
     \query ->
       query
@@ -174,7 +175,10 @@ compileStatement s@(T.Return () expressions) = do
             expressions
             & mapMaybe (\case
                 (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just table) name)))) ->
-                  Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ compileNameForTableColumn (Identifier table) (Identifier name))
+                  Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ compileNameForTableColumn (Identifier table) (Identifier name)
+                (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier Nothing name)))) ->
+                  Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ (Identifier name)
+              )
         , wheres = []
         }
 compileStatement s@(T.StmtExt (T.StmtCompilationFailed _)) = do
@@ -207,7 +211,7 @@ isNewSubqueryIfNecessary expr pq =
     -- Aca podria optimizar porque si el nuevo let no usa los anteriores
     -- esta todo bien
     (T.Let _ _ _) -> thereIsAGroupBy || thereAreOtherLets
-    (T.Return _ _) -> False
+    (T.Return _ _) -> thereAreOtherLets
     (T.GroupBy _ _ _) -> thereIsAGroupBy || thereAreOtherLets || thereIsAJoin
     (T.OrderBy _ _) -> False
     (T.StmtExt (T.StmtCompilationFailed _)) -> undefined

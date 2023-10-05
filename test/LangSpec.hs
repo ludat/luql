@@ -1,7 +1,8 @@
-{-# LANGUAGE GADTs #-}
 module LangSpec
     ( spec
     ) where
+
+import Control.Exception (bracket)
 
 import Data.Function ((&))
 import Data.String.Interpolate
@@ -107,17 +108,22 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
         from Languages as l
         join Films
     |]
-  itMatchesSnapshot "a return keeps only that column"
+  itMatchesSnapshot "a return keeps a simple column"
+    [__i|
+        let a = 7
+        return a, 4
+    |]
+  itMatchesSnapshot "a return keeps a model column"
     [__i|
         from Languages as l
         return l.language_id
     |]
 
 withDatabase :: (PG.Connection -> IO ()) -> IO ()
-withDatabase action = do
-  conn <- PG.connectPostgreSQL "postgres://postgres:123456@localhost:5432/postgres"
-  _ <- action conn
-  PG.close conn
+withDatabase action = bracket
+  (PG.connectPostgreSQL "postgres://postgres:123456@localhost:5432/postgres")
+  PG.close
+  action
 
 shouldMatchSnapshot :: (HasCallStack, Show a) => a -> String -> IO ()
 shouldMatchSnapshot actualToShow filepath = do

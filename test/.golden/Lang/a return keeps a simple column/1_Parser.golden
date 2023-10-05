@@ -1,0 +1,9 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ Let ( 0 , 9 ) "a" (Lit ( 8 , 9 ) (LiteralInt 7))
+        , Return
+            ( 10 , 21 )
+            [ Ref ( 17 , 18 ) "a" , Lit ( 20 , 21 ) (LiteralInt 4) ]
+        ]
+    }

@@ -1,0 +1,1 @@
+SELECT "t"."a" FROM (SELECT 7 AS "a"  ) AS "t"

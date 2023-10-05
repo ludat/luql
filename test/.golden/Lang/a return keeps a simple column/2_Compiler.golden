@@ -1,0 +1,14 @@
+Right
+  CompiledQuery
+    { unCompiledQuery =
+        [ Let () "a" (Lit IntType (LiteralInt 7))
+        , Return
+            ()
+            [ ExprExt
+                (ComputedColumn
+                   IntType
+                   ColumnDefinition { column = QualifiedIdentifier Nothing "a" })
+            , Lit IntType (LiteralInt 4)
+            ]
+        ]
+    }
