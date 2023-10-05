@@ -179,7 +179,6 @@ compileStatement s@(T.Return () expressions) = do
                 (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier Nothing name)))) ->
                   Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ (Identifier name)
               )
-        , wheres = []
         }
 compileStatement s@(T.StmtExt (T.StmtCompilationFailed _)) = do
   error [iii|compileStatement #{s}|]
