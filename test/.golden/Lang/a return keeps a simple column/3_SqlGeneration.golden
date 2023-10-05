@@ -1,0 +1,23 @@
+PartialQuery
+  { fromTable =
+      Just
+        (SubqueryTable
+           PartialQuery
+             { fromTable = Nothing
+             , selectedColumns =
+                 [ SelectNewColumn
+                     (LiteralInt 7) Identifier { fromIdentifier = "a" }
+                 ]
+             , wheres = []
+             , joins = []
+             , groupBy = Nothing
+             , orderBy = []
+             }
+           Identifier { fromIdentifier = "t" })
+  , selectedColumns =
+      [ SelectColumnFromTable (QualifiedIdentifier (Just "t") "a") ]
+  , wheres = []
+  , joins = []
+  , groupBy = Nothing
+  , orderBy = []
+  }

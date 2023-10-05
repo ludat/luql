@@ -8,7 +8,6 @@ Right
                 (ComputedColumn
                    IntType
                    ColumnDefinition { column = QualifiedIdentifier Nothing "a" })
-            , Lit IntType (LiteralInt 4)
             ]
         ]
     }

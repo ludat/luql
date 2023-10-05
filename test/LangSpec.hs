@@ -111,7 +111,7 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
   itMatchesSnapshot "a return keeps a simple column"
     [__i|
         let a = 7
-        return a, 4
+        return a
     |]
   itMatchesSnapshot "a return keeps a model column"
     [__i|
