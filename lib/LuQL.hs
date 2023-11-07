@@ -1,7 +1,6 @@
 module LuQL where
 
 import Data.String.Interpolate (iii)
-import Data.Text (Text)
 
 import Database.PostgreSQL.Query
 import Database.PostgreSQL.Query qualified as PG
@@ -14,7 +13,7 @@ import LuQL.SqlGeneration
 
 completeQuery :: Models -> Int -> RawQuery -> [Completion]
 completeQuery models position rawQuery = do
-  LuQL.Compiler.generateCompletions (pTraceShowIdForceColor position) models $ pTraceShowIdForceColor rawQuery
+  LuQL.Compiler.generateCompletions position models rawQuery
 
 compileQuery :: Models -> RawQuery -> SqlBuilder
 compileQuery models rawQuery = do

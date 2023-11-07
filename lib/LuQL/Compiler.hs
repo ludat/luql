@@ -192,7 +192,7 @@ emit queryStatement = do
     }
 
 compileStatement :: QueryStatement Raw -> CompilerM ()
-compileStatement (From originalPosition (maybeModelAs, modelExpr)) = do
+compileStatement (From srcRange (maybeModelAs, modelExpr)) = do
   tcModel <- compileExpression modelExpr
   case tcModel of
     (ExprExt (ComputedModelDefinition _ model)) -> do
@@ -205,17 +205,17 @@ compileStatement (From originalPosition (maybeModelAs, modelExpr)) = do
           }
       emit $ From () (modelName, model)
       case model.implicitWhere of
-        Just implicitWhere -> compileStatement $ Where originalPosition $ implicitWhere $ modelName
+        Just implicitWhere -> compileStatement $ Where srcRange $ implicitWhere $ modelName
         Nothing -> pure ()
     _ -> do
-      addError originalPosition [iii|Invalid model|]
-compileStatement (Where originalPosition expression) = do
+      addError srcRange [iii|Invalid model|]
+compileStatement (Where srcRange expression) = do
   newWhere <- compileExpression expression
   unless (getType newWhere `matchesType` BooleanType) $ do
-    addError originalPosition [iii|wrong type, expected boolean|]
+    addError srcRange [iii|wrong type, expected boolean|]
 
   emit $ Where () newWhere
-compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr) = do
+compileStatement (Join srcRange (maybeModelAs, modelExpr) mayJoinExpr) = do
   originalTypeInfo <- getTypeInfo
 
   otherModelExpr <- compileExpression modelExpr
@@ -225,7 +225,7 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
     _ ->
       addCatastrophicError
         [iii|value to join is not a model|]
-        originalPosition
+        srcRange
 
   let (otherRuntimeModel, otherModelName) = instantiateModel' newModelToJoin maybeModelAs
 
@@ -255,7 +255,7 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
               ( do
                   addCatastrophicError
                     [iii|no model to join available|]
-                    originalPosition
+                    srcRange
               ) pure
 
 
@@ -263,23 +263,23 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
           Just where_ ->
             compileExpression $
               Apply
-                originalPosition
-                (Ref originalPosition "&&")
+                srcRange
+                (Ref srcRange "&&")
                 [ Apply
-                    originalPosition
-                    (Ref originalPosition "==")
-                    [ Prop originalPosition (Ref originalPosition modelToJoin) $ fromIdentifier otherColumn,
-                      Prop originalPosition (Ref originalPosition otherModelName) $ fromIdentifier myColumn
+                    srcRange
+                    (Ref srcRange "==")
+                    [ Prop srcRange (Ref srcRange modelToJoin) $ fromIdentifier otherColumn,
+                      Prop srcRange (Ref srcRange otherModelName) $ fromIdentifier myColumn
                     ],
                   where_ otherModelName
                 ]
           Nothing ->
             compileExpression $
               Apply
-                originalPosition
-                (Ref originalPosition "==")
-                [ Prop originalPosition (Ref originalPosition modelToJoin) $ fromIdentifier otherColumn,
-                  Prop originalPosition (Ref originalPosition otherModelName) $ fromIdentifier myColumn
+                srcRange
+                (Ref srcRange "==")
+                [ Prop srcRange (Ref srcRange modelToJoin) $ fromIdentifier otherColumn,
+                  Prop srcRange (Ref srcRange otherModelName) $ fromIdentifier myColumn
                 ]
 
   emit $ Join () (otherModelName, newModelToJoin) joinExpression
@@ -375,7 +375,7 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
 
       pure compiledColumns
 
-compileStatement (Let _originalPosition name expression) = do
+compileStatement (Let _srcRange name expression) = do
   e <- compileExpression expression
 
   modifyTypeInfo $ \ti ->
@@ -397,8 +397,8 @@ compileStatement (OrderBy _ exprs) = do
     compiledExpr <- compileExpression expr
     pure (compiledExpr, dir)
   emit $ OrderBy () tExprs
-compileStatement (StmtExt (ExtStmtInvalid pos t)) = do
-  addCatastrophicError [iii|Invalid statement: #{t}|] pos
+compileStatement (StmtExt (ExtStmtInvalid srcRange t)) = do
+  addCatastrophicError [iii|Invalid statement: #{t}|] srcRange
 
 data TagOrDiscard = Tag | Discard
   deriving (Show, Eq)
@@ -549,7 +549,7 @@ compileExpression expression@(Prop srcRange expr propName) = do
       (IntType, "in") -> do
         let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
               tExprs <- forM paramExprs $ \e -> do
-                (getPos e,) <$> compileExpression e
+                (getSrcRange e,) <$> compileExpression e
               case tExprs of
                 [(_p1, e1)] -> do
                   pure ([tExpr, e1], BooleanType, ("in", [getType tExpr, getType e1]))
@@ -576,7 +576,7 @@ compileExpression expression@(Prop srcRange expr propName) = do
       (DateType, "between") -> do
         let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
               tExprs <- forM paramExprs $ \e -> do
-                (getPos e,) <$> compileExpression e
+                (getSrcRange e,) <$> compileExpression e
               case tExprs of
                 [(p1, e1), (p2, e2)] -> do
                   unless (getType e1 `matchesType` StringType) $
@@ -613,15 +613,15 @@ compileExpression expression@(Prop srcRange expr propName) = do
         pure $
           ExprExt $
             ExprCompilationFailed expression
-compileExpression (Ref pos name) = do
-  resolveName pos name
-compileExpression (Apply pos function params) = do
+compileExpression (Ref srcRange name) = do
+  resolveName srcRange name
+compileExpression (Apply srcRange function params) = do
   typecheckedFunction <- compileExpression function
   (typecheckedParams, returnType, resolvedFunction) <- case typecheckedFunction of
     (ExprExt (ComputedFunction _ (FunctionTypeChecker checkTypes))) ->
-      checkTypes pos params
+      checkTypes srcRange params
     value -> do
-      addError (getPos function) [iii|No se pueden aplicar #{value}|]
+      addError (getSrcRange function) [iii|No se pueden aplicar #{value}|]
       tExprs <- mapM compileExpression params
       pure (tExprs, malo, ("unknown", []))
 
@@ -629,21 +629,21 @@ compileExpression (Apply pos function params) = do
 compileExpression (RawSql _ exprOrText) = do
   coso <- mapM (mapM compileExpression) exprOrText
   pure $ RawSql AnyType coso
-compileExpression (If _pos condExpr thenExpr elseExpr) = do
+compileExpression (If _srcRange condExpr thenExpr elseExpr) = do
   tcCondExpr <- compileExpression condExpr
   tcThenExpr <- compileExpression thenExpr
   tcElseExpr <- compileExpression elseExpr
 
   unless (getType tcCondExpr `matchesType` BooleanType) $
-    addError (getPos condExpr) [iii|La condicion de un if deberia ser un booleano pero es #{getType tcCondExpr}|]
+    addError (getSrcRange condExpr) [iii|La condicion de un if deberia ser un booleano pero es #{getType tcCondExpr}|]
 
   unless (getType tcThenExpr `matchesType` getType tcElseExpr) $
-    addError (getPos elseExpr) [iii|El else y el then deberian matchear pero #{getType tcThenExpr} es diferente que #{getType tcElseExpr}|]
+    addError (getSrcRange elseExpr) [iii|El else y el then deberian matchear pero #{getType tcThenExpr} es diferente que #{getType tcElseExpr}|]
 
   pure $ If (getType tcThenExpr) tcCondExpr tcThenExpr tcElseExpr
-compileExpression (ExprExt (EmptyExpr pos)) = do
-  addError pos [iii|Missing expression|]
-  completeAllLocalVars pos
+compileExpression (ExprExt (EmptyExpr srcRange)) = do
+  addError srcRange [iii|Missing expression|]
+  completeAllLocalVars srcRange
   pure $ Lit (lit NullType) LiteralNull
 
 completeWith :: Range -> (Int -> CompilerM [Completion]) -> CompilerM ()
@@ -678,56 +678,56 @@ getType (ExprExt (ComputedModelDefinition ty _)) = ty
 
 equalityFunction :: Text -> FunctionTypeChecker
 equalityFunction name = FunctionTypeChecker $
-  \pos paramExprs -> do
+  \srcRange paramExprs -> do
     tExprs <- forM paramExprs $ \e -> do
-      (getPos e,) <$> compileExpression e
+      (getSrcRange e,) <$> compileExpression e
     case tExprs of
       [(_p1, e1), (_p2, e2)] -> do
         unless (getType e1 `matchesType` getType e2 || getType e2 == NullType) $
-          addError pos [iii|expected types to be equals but #{getType e1} is not equal to #{getType e2}|]
+          addError srcRange [iii|expected types to be equals but #{getType e1} is not equal to #{getType e2}|]
         pure
           ( [e1, e2],
             BooleanType,
             (name, [getType e1, getType e2])
           )
       _ -> do
-        addError pos [iii|sum expects one argument|]
+        addError srcRange [iii|sum expects one argument|]
         pure (fmap snd tExprs, malo, (name, []))
 
 binaryOperator :: Text -> FunctionTypeChecker
 binaryOperator name = FunctionTypeChecker $
-  \pos paramExprs -> do
+  \srcRange paramExprs -> do
     tExprs <- forM paramExprs $ \e -> do
-      (getPos e,) <$> compileExpression e
+      (getSrcRange e,) <$> compileExpression e
     case tExprs of
       [(_p1, e1), (_p2, e2)] -> do
         unless (getType e1 `matchesType` getType e2 || getType e2 == NullType) $
-          addError pos [iii|expected types to be equals but #{getType e1} is not equal to #{getType e2}|]
+          addError srcRange [iii|expected types to be equals but #{getType e1} is not equal to #{getType e2}|]
         pure
           ( [e1, e2],
             getType e1,
             (name, [getType e1, getType e2])
           )
       _ -> do
-        addError pos [iii|sum expects one argument|]
+        addError srcRange [iii|sum expects one argument|]
         pure (fmap snd tExprs, malo, (name, []))
 
 comparisonFunction :: Text -> FunctionTypeChecker
 comparisonFunction name = FunctionTypeChecker $
-  \pos paramExprs -> do
+  \srcRange paramExprs -> do
     tExprs <- forM paramExprs $ \e -> do
-      (getPos e,) <$> compileExpression e
+      (getSrcRange e,) <$> compileExpression e
     case tExprs of
       [(_p1, e1), (_p2, e2)] -> do
         unless (getType e1 `matchesType` getType e2) $
-          addError pos [iii|expected types to be equal but #{getType e1} is not equal to #{getType e2}|]
+          addError srcRange [iii|expected types to be equal but #{getType e1} is not equal to #{getType e2}|]
         pure
           ( [e1, e2],
             BooleanType,
             (name, [getType e1, getType e2])
           )
       _ -> do
-        addError pos [iii|?? expects two parameters|]
+        addError srcRange [iii|?? expects two parameters|]
         pure ([], UnknownType, undefined)
 
 nativeFunctions :: Map Text FunctionTypeChecker
@@ -747,125 +747,125 @@ nativeFunctions =
       ("<=", comparisonFunction "<="),
       (">=", comparisonFunction ">="),
       ( "char_length",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               unless (getType e1 `matchesType` StringType) $
-                addError pos [iii|expected types to be equal but #{getType e1} is not equal to StringType|]
+                addError srcRange [iii|expected types to be equal but #{getType e1} is not equal to StringType|]
               pure
                 ( [e1],
                   IntType,
                   ("char_length", [getType e1])
                 )
             _ -> do
-              addError pos [iii|?? expects two parameters|]
+              addError srcRange [iii|?? expects two parameters|]
               pure ([], IntType, undefined)
       ),
       ( "??",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1), (_p2, e2)] -> do
               unless (getType e1 `matchesType` getType e2) $
-                addError pos [iii|expected types to be equal but #{getType e1} is not equal to #{getType e2}|]
+                addError srcRange [iii|expected types to be equal but #{getType e1} is not equal to #{getType e2}|]
               pure
                 ( [e1, e2],
                   getType e1,
                   ("??", [getType e1, getType e2])
                 )
             _ -> do
-              addError pos [iii|?? expects two parameters|]
+              addError srcRange [iii|?? expects two parameters|]
               pure ([], IntType, undefined)
       )
       , ( "max",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               pure ([e1], IntType, ("max", [getType e1]))
             _ -> do
-              addError pos [iii|max expects one parameter|]
+              addError srcRange [iii|max expects one parameter|]
               pure ([], IntType, undefined)
       )
       , ( "!",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               pure ([e1], BooleanType, ("!", [getType e1]))
             _ -> do
-              addError pos [iii|max expects one parameter|]
+              addError srcRange [iii|max expects one parameter|]
               pure ([], IntType, undefined)
       )
       , ( "sum",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               pure ([e1], IntType, ("sum", [getType e1]))
             _ -> do
-              addError pos [iii|max expects one parameter|]
+              addError srcRange [iii|max expects one parameter|]
               pure ([], IntType, undefined)
       )
       , ( "sum_if",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1), (_p2, e2)] -> do
               pure ([e1, e2], IntType, ("sum_if", [getType e1, getType e2]))
             _ -> do
-              addError pos [iii|sum_if expects two parameter|]
+              addError srcRange [iii|sum_if expects two parameter|]
               pure ([], IntType, undefined)
       )
       , ( "extract_year",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               pure ([e1], IntType, ("extract_year", [getType e1]))
             _ -> do
-              addError pos [iii|extract_year needs one parameter|]
+              addError srcRange [iii|extract_year needs one parameter|]
               pure ([], IntType, undefined)
       )
       , ( "extract_month",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               pure ([e1], IntType, ("extract_month", [getType e1]))
             _ -> do
-              addError pos [iii|extract_month needs one parameter|]
+              addError srcRange [iii|extract_month needs one parameter|]
               pure ([], IntType, undefined)
       )
       -- , ( "pg_typeof",
-      --   FunctionTypeChecker $ \pos paramExprs -> do
+      --   FunctionTypeChecker $ \srcRange paramExprs -> do
       --     tExprs <- forM paramExprs $ \e -> do
-      --       (getPos e,) <$> compileExpression e
+      --       (getSrcRange e,) <$> compileExpression e
       --     case tExprs of
       --       [(_p1, e1)] -> do
       --         pure ([e1], StringType, ("pg_typeof", [getType e1]))
       --       _ -> do
-      --         addError pos [iii|pg_typeof needs one parameter|]
+      --         addError getSrcPos [iii|pg_typeof needs one parameter|]
       --         pure ([], StringType, undefined)
       -- )
       , ( "count_distinct",
-        FunctionTypeChecker $ \pos paramExprs -> do
+        FunctionTypeChecker $ \srcRange paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
-            (getPos e,) <$> compileExpression e
+            (getSrcRange e,) <$> compileExpression e
           case tExprs of
             [(_p1, e1)] -> do
               pure ([e1], IntType, ("count_distinct", [getType e1]))
             _ -> do
-              addError pos [iii|count_distinct needs one parameter|]
+              addError srcRange [iii|count_distinct needs one parameter|]
               pure ([], IntType, undefined)
       )
       -- , ("avg", FunctionType RuntimeFunction
@@ -892,12 +892,12 @@ data FunctionNotation
   deriving (Eq, Show)
 
 resolveName :: Range -> Text -> CompilerM (QueryExpression Compiled)
-resolveName pos name = do
+resolveName srcRange name = do
   TypeInfo {..} <- getTypeInfo
 
-  completeWith pos $ \complPos -> do
+  completeWith srcRange $ \complPos -> do
     let stringUntilComplPos =
-          name & T.take (complPos - pos.begin)
+          name & T.take (complPos - srcRange.begin)
     variablesInScope
       & filter (\(n, _) -> T.isPrefixOf stringUntilComplPos n)
       & fmap (\(n, _) -> n)
@@ -916,15 +916,15 @@ resolveName pos name = do
     ([], Just f) ->
       pure $ ExprExt $ ComputedFunction (FunctionType f) f
     ([], Nothing) -> do
-      addCatastrophicError [iii|reference not found: '#{name}'|] pos
+      addCatastrophicError [iii|reference not found: '#{name}'|] srcRange
     ((_, val) : _, _) ->
       pure val
 
 addError :: Range -> Text -> CompilerM ()
-addError pos newError =
+addError srcRange newError =
   modify' $ \cs ->
     cs
-      { errors = cs.errors ++ [CompilerError newError pos]
+      { errors = cs.errors ++ [CompilerError newError srcRange]
       }
 
 addCatastrophicError ::
@@ -932,6 +932,6 @@ addCatastrophicError ::
   Text ->
   Range ->
   CompilerM a
-addCatastrophicError newError position = do
-  addError position newError
+addCatastrophicError newError srcRange = do
+  addError srcRange newError
   refute ()

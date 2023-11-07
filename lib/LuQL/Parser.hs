@@ -145,7 +145,7 @@ expressionParser = do
       (pos, _) <- withLocation $ symbol op
       pure (\expr1 expr2 ->
         Apply
-          (Range (expr1 & getPos & (.begin)) (expr2 & getPos & (.end)))
+          (Range (expr1 & getSrcRange & (.begin)) (expr2 & getSrcRange & (.end)))
           (Ref pos op)
           [expr1, expr2]
         )
@@ -155,7 +155,7 @@ expressionParser = do
       (pos, _) <- withLocation $ symbol op
       pure (\expr ->
         Apply
-          (expr & getPos)
+          (expr & getSrcRange)
           (Ref pos op)
           [expr]
         )
@@ -360,31 +360,30 @@ invalidStatementParser = do
   (pos, text) <- withLocation $ takeWhile1P Nothing (\c -> c /= '\n')
   pure $ StmtExt $ ExtStmtInvalid pos text
 
+class HasSrcRange a where
+  getSrcRange :: a -> Range
 
-class HasPosition a where
-  getPos :: a -> Range
-
-instance HasPosition (QueryStatement Raw) where
-  getPos :: QueryStatement Raw -> Range
-  getPos (From pos _) = pos
-  getPos (Where pos _) = pos
-  getPos (GroupBy pos _ _) = pos
-  getPos (Join pos _ _) = pos
-  getPos (Let pos _ _) = pos
-  getPos (OrderBy pos _) = pos
-  getPos (Return pos _) = pos
-  getPos (StmtExt (ExtStmtInvalid pos _)) = pos
+instance HasSrcRange (QueryStatement Raw) where
+  getSrcRange :: QueryStatement Raw -> Range
+  getSrcRange (From pos _) = pos
+  getSrcRange (Where pos _) = pos
+  getSrcRange (GroupBy pos _ _) = pos
+  getSrcRange (Join pos _ _) = pos
+  getSrcRange (Let pos _ _) = pos
+  getSrcRange (OrderBy pos _) = pos
+  getSrcRange (Return pos _) = pos
+  getSrcRange (StmtExt (ExtStmtInvalid pos _)) = pos
 
 
-instance HasPosition (QueryExpression Raw) where
-  getPos :: QueryExpression Raw -> Range
-  getPos (Lit pos _) = pos
-  getPos (Prop pos _ _) = pos
-  getPos (Ref pos _) = pos
-  getPos (Apply pos _ _) = pos
-  getPos (RawSql pos _) = pos
-  getPos (If pos _ _ _) = pos
-  getPos (ExprExt (EmptyExpr pos)) = pos
+instance HasSrcRange (QueryExpression Raw) where
+  getSrcRange :: QueryExpression Raw -> Range
+  getSrcRange (Lit pos _) = pos
+  getSrcRange (Prop pos _ _) = pos
+  getSrcRange (Ref pos _) = pos
+  getSrcRange (Apply pos _ _) = pos
+  getSrcRange (RawSql pos _) = pos
+  getSrcRange (If pos _ _ _) = pos
+  getSrcRange (ExprExt (EmptyExpr pos)) = pos
 
 parser :: Parser RawQuery
 parser = do
