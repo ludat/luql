@@ -3,6 +3,7 @@
 
 module LuQL.Render where
 
+import Data.ByteString.Char8 qualified as BS
 import Data.Function ((&))
 import Data.List (intersperse)
 import Data.Maybe (catMaybes, fromJust)
@@ -78,10 +79,10 @@ renderGroupBy (Just GroupByDefinition {byColumns = byColumns}) =
 
 renderJoins :: [(Table, [SqlExpression])] -> Maybe SqlBuilder
 renderJoins joins =
-  let condList = fmap renderJoin joins
-   in if null condList
+  let joinList = fmap renderJoin joins
+   in if null joinList
         then Nothing
-        else Just [PG.sqlExp|^{mconcat $ intersperse " " condList}|]
+        else Just [PG.sqlExp|^{mconcat $ intersperse " " joinList}|]
 
 renderJoin :: (Table, [SqlExpression]) -> SqlBuilder
 renderJoin (table, conds) =
@@ -164,7 +165,8 @@ text2SqlBuilder =
 
 renderSqlBuilder :: PG.Connection -> SqlBuilder -> IO PG.Query
 renderSqlBuilder conn sqlBuilder = do
-  (sqlQuery, _logs) <- PG.runSqlBuilder conn PG.defaultLogMasker sqlBuilder
+  (sqlQuery, logs) <- PG.runSqlBuilder conn PG.defaultLogMasker sqlBuilder
+  BS.putStrLn logs
   pure sqlQuery
 
 runQueryBuilder :: (PG.FromRow r) => PG.Connection -> SqlBuilder -> IO [r]

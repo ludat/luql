@@ -27,7 +27,7 @@ spec =  do
          & either id (error . TL.unpack . mappend "Successful compilation: " . pShow)
          )
          `shouldBe`
-            [ CompilerError "Ref (54,62) \"language\" no tiene una propiedad: name" ( 62 , 68 )
+            [ CompilerError "Ref (Range {begin = 54, end = 62}) \"language\" no tiene una propiedad: name" (Range 62 68)
             ]
 
     it "fails to compile if the group by doesn't keep the model field to join by" $ do
@@ -43,5 +43,5 @@ spec =  do
          & either id (error . TL.unpack . mappend "Successful compilation: " . pShow)
          )
          `shouldBe`
-            [ CompilerError "no model to join available" ( 34 , 48 )
+            [ CompilerError "no model to join available" (Range 34 48)
             ]

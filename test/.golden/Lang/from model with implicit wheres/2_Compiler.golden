@@ -23,10 +23,13 @@ Right
                 , relatedTables = fromList []
                 , implicitWhere =
                     Apply
-                      ( 0 , 0 )
-                      (Ref ( 0 , 0 ) "==")
-                      [ Prop ( 0 , 0 ) (Ref ( 0 , 0 ) "self") "active"
-                      , Lit ( 0 , 0 ) (LiteralInt 1)
+                      Range { begin = -1 , end = -1 }
+                      (Ref Range { begin = -1 , end = -1 } "==")
+                      [ Prop
+                          Range { begin = -1 , end = -1 }
+                          (Ref Range { begin = -1 , end = -1 } "self")
+                          "active"
+                      , Lit Range { begin = -1 , end = -1 } (LiteralInt 1)
                       ]
                 }
             )

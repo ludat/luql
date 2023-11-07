@@ -15,7 +15,10 @@ PartialQuery
              }
            Identifier { fromIdentifier = "t" })
   , selectedColumns =
-      [ SelectColumnFromTable (QualifiedIdentifier (Just "t") "a") ]
+      [ SelectNewColumn
+          (Ref Identifier { fromIdentifier = "a" })
+          Identifier { fromIdentifier = "a" }
+      ]
   , wheres = []
   , joins = []
   , groupBy = Nothing

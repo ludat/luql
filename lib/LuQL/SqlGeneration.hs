@@ -175,9 +175,9 @@ compileStatement s@(T.Return () expressions) = do
             expressions
             & mapMaybe (\case
                 (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just table) name)))) ->
-                  Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ compileNameForTableColumn (Identifier table) (Identifier name)
+                  Just $ SelectNewColumn (Ref $ compileNameForTableColumn (Identifier table) (Identifier name)) (compileNameForTableColumn (Identifier table) (Identifier name))
                 (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier Nothing name)))) ->
-                  Just $ SelectColumnFromTable $ qualifyIdentifier "t" $ (Identifier name)
+                  Just $ SelectNewColumn (Ref $ Identifier name) (Identifier name)
               )
         }
 compileStatement s@(T.StmtExt (T.StmtCompilationFailed _)) = do
@@ -271,6 +271,7 @@ compileExpression (T.Apply _ ((name, paramTypes)) params) =
           RawSql [Left "NOT ", Right val]
         ("??", [_, _], [_, _]) ->
           Call DefaultNotation "COALESCE" compiledParams
+        -- ("pg_typeof", [_], [_]) -> Call DefaultNotation "pg_typeof" compiledParams
         _ ->
           error
             [__i|unknown function: #{name} con

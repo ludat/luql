@@ -1,7 +1,12 @@
 Right
   RawQuery
     { unRawQuery =
-        [ From ( 0 , 15 ) ( Just "l" , Ref ( 5 , 15 ) "Languages" )
-        , Join ( 20 , 30 ) ( Nothing , Ref ( 25 , 30 ) "Films" ) Nothing
+        [ From
+            Range { begin = 0 , end = 15 }
+            ( Just "l" , Ref Range { begin = 5 , end = 15 } "Languages" )
+        , Join
+            Range { begin = 20 , end = 30 }
+            ( Nothing , Ref Range { begin = 25 , end = 30 } "Films" )
+            Nothing
         ]
     }

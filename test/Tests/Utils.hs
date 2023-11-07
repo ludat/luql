@@ -5,6 +5,7 @@ import Data.Map qualified as Map
 import Data.Text (Text)
 
 import LuQL.Compiler
+import LuQL.Parser (nullRange)
 import LuQL.Types
 
 
@@ -73,10 +74,10 @@ models =
         { defaultSingularName = "italian"
         , implicitWhere = Just $ \model ->
             Apply
-              (0, 0)
-              (Ref (0, 0) "==")
-              [ Prop (0, 0) (Ref (0, 0) model) "name"
-              , Lit (0, 0) $ LiteralString "Italian"
+              nullRange
+              (Ref nullRange "==")
+              [ Prop nullRange (Ref nullRange model) "name"
+              , Lit nullRange $ LiteralString "Italian"
               ]
         }
     cities =
@@ -115,10 +116,10 @@ models =
               ],
           implicitWhere = Just $ \model ->
             Apply
-              (0, 0)
-              (Ref (0, 0) "==")
-              [ Prop (0, 0) (Ref (0, 0) model) "active"
-              , Lit (0, 0) $ LiteralInt 1
+              nullRange
+              (Ref nullRange "==")
+              [ Prop nullRange (Ref nullRange model) "active"
+              , Lit nullRange $ LiteralInt 1
               ],
           relatedTables =
             Map.fromList

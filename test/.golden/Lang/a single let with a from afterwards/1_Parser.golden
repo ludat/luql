@@ -1,7 +1,12 @@
 Right
   RawQuery
     { unRawQuery =
-        [ Let ( 0 , 10 ) "a" (Lit ( 8 , 10 ) (LiteralInt 23))
-        , From ( 11 , 25 ) ( Nothing , Ref ( 16 , 25 ) "Languages" )
+        [ Let
+            Range { begin = 0 , end = 10 }
+            "a"
+            (Lit Range { begin = 8 , end = 10 } (LiteralInt 23))
+        , From
+            Range { begin = 11 , end = 25 }
+            ( Nothing , Ref Range { begin = 16 , end = 25 } "Languages" )
         ]
     }

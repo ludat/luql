@@ -1,13 +1,27 @@
 Right
   RawQuery
     { unRawQuery =
-        [ Let ( 0 , 12 ) "kept" (Lit ( 11 , 12 ) (LiteralInt 7))
-        , Let ( 13 , 25 ) "lost" (Lit ( 24 , 25 ) (LiteralInt 2))
+        [ Let
+            Range { begin = 0 , end = 12 }
+            "kept"
+            (Lit Range { begin = 11 , end = 12 } (LiteralInt 7))
+        , Let
+            Range { begin = 13 , end = 25 }
+            "lost"
+            (Lit Range { begin = 24 , end = 25 } (LiteralInt 2))
         , GroupBy
-            ( 26 , 32 )
-            [ ( Ref ( 35 , 40 ) "kept" , Nothing ) ]
-            [ Let ( 44 , 58 ) "new" (Ref ( 54 , 58 ) "kept") ]
-        , OrderBy ( 61 , 67 ) [ ( Ref ( 70 , 73 ) "new" , Nothing ) ]
-        , OrderBy ( 74 , 80 ) [ ( Ref ( 83 , 87 ) "kept" , Nothing ) ]
+            Range { begin = 26 , end = 32 }
+            [ ( Ref Range { begin = 35 , end = 40 } "kept" , Nothing ) ]
+            [ Let
+                Range { begin = 44 , end = 58 }
+                "new"
+                (Ref Range { begin = 54 , end = 58 } "kept")
+            ]
+        , OrderBy
+            Range { begin = 61 , end = 67 }
+            [ ( Ref Range { begin = 70 , end = 73 } "new" , Nothing ) ]
+        , OrderBy
+            Range { begin = 74 , end = 80 }
+            [ ( Ref Range { begin = 83 , end = 87 } "kept" , Nothing ) ]
         ]
     }

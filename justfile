@@ -16,6 +16,11 @@ ghcid: db
 db:
   docker-compose up -d
 
+db-init: db
+  #!/bin/bash -eux
+  curl -L https://github.com/devrimgunduz/pagila/raw/master/pagila-schema.sql | psql -f - postgres://postgres:123456@localhost:5432/postgres
+  curl -L https://github.com/devrimgunduz/pagila/raw/master/pagila-data.sql | psql -f - postgres://postgres:123456@localhost:5432/postgres
+
 pgcli:
   pgcli postgres://postgres:123456@localhost:5432/postgres
 

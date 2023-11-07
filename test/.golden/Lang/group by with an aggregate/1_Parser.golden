@@ -1,20 +1,29 @@
 Right
   RawQuery
     { unRawQuery =
-        [ From ( 0 , 11 ) ( Nothing , Ref ( 5 , 11 ) "Cities" )
+        [ From
+            Range { begin = 0 , end = 11 }
+            ( Nothing , Ref Range { begin = 5 , end = 11 } "Cities" )
         , GroupBy
-            ( 12 , 18 )
-            [ ( Prop ( 25 , 37 ) (Ref ( 21 , 25 ) "city") "country_id"
+            Range { begin = 12 , end = 18 }
+            [ ( Prop
+                  Range { begin = 25 , end = 37 }
+                  (Ref Range { begin = 21 , end = 25 } "city")
+                  "country_id"
               , Nothing
               )
             ]
             [ Let
-                ( 41 , 76 )
+                Range { begin = 41 , end = 76 }
                 "max_city"
                 (Apply
-                   ( 59 , 76 )
-                   (Ref ( 56 , 59 ) "max")
-                   [ Prop ( 64 , 75 ) (Ref ( 60 , 64 ) "city") "country_id" ])
+                   Range { begin = 59 , end = 76 }
+                   (Ref Range { begin = 56 , end = 59 } "max")
+                   [ Prop
+                       Range { begin = 64 , end = 75 }
+                       (Ref Range { begin = 60 , end = 64 } "city")
+                       "country_id"
+                   ])
             ]
         ]
     }

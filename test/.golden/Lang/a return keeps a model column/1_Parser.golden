@@ -1,9 +1,15 @@
 Right
   RawQuery
     { unRawQuery =
-        [ From ( 0 , 15 ) ( Just "l" , Ref ( 5 , 15 ) "Languages" )
+        [ From
+            Range { begin = 0 , end = 15 }
+            ( Just "l" , Ref Range { begin = 5 , end = 15 } "Languages" )
         , Return
-            ( 20 , 40 )
-            [ Prop ( 28 , 40 ) (Ref ( 27 , 28 ) "l") "language_id" ]
+            Range { begin = 20 , end = 40 }
+            [ Prop
+                Range { begin = 28 , end = 40 }
+                (Ref Range { begin = 27 , end = 28 } "l")
+                "language_id"
+            ]
         ]
     }

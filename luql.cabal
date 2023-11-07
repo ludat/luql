@@ -42,6 +42,7 @@ common deps
     , postgresql-query
     , postgresql-simple
     -- , pretty-simple
+    , monad-validate
     , safe
     , scientific
     , string-interpolate

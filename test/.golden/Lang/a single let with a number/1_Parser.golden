@@ -1,5 +1,9 @@
 Right
   RawQuery
     { unRawQuery =
-        [ Let ( 0 , 10 ) "a" (Lit ( 8 , 10 ) (LiteralInt 23)) ]
+        [ Let
+            Range { begin = 0 , end = 10 }
+            "a"
+            (Lit Range { begin = 8 , end = 10 } (LiteralInt 23))
+        ]
     }

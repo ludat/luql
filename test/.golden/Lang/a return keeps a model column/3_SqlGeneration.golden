@@ -12,8 +12,9 @@ PartialQuery
                  ]
              })
   , selectedColumns =
-      [ SelectColumnFromTable
-          (QualifiedIdentifier (Just "t") "l.language_id")
+      [ SelectNewColumn
+          (Ref Identifier { fromIdentifier = "l.language_id" })
+          Identifier { fromIdentifier = "l.language_id" }
       ]
   , wheres = []
   , joins = []

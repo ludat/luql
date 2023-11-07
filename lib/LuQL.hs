@@ -1,6 +1,7 @@
 module LuQL where
 
 import Data.String.Interpolate (iii)
+import Data.Text (Text)
 
 import Database.PostgreSQL.Query
 import Database.PostgreSQL.Query qualified as PG
@@ -11,16 +12,18 @@ import LuQL.Render
 import LuQL.Runner
 import LuQL.SqlGeneration
 
-compileQuery :: Models -> RawQuery -> SqlBuilder
-compileQuery models (RawQuery queryStatements) = do
-  let typecheckedStatements = case LuQL.Compiler.compileStatements models queryStatements of
-        (qss, TypeInfo {errors = []}) -> qss
-        (_, ti) ->
-          let
-            errors = ti.errors
-          in error [iii|errores aparecieron en la query: #{errors}|]
+completeQuery :: Models -> Int -> RawQuery -> [Completion]
+completeQuery models position rawQuery = do
+  LuQL.Compiler.generateCompletions (pTraceShowIdForceColor position) models $ pTraceShowIdForceColor rawQuery
 
-      partialQuery = LuQL.SqlGeneration.compileStatements typecheckedStatements
+compileQuery :: Models -> RawQuery -> SqlBuilder
+compileQuery models rawQuery = do
+  let typecheckedStatements = case LuQL.Compiler.compileProgram models rawQuery of
+        (Right qss) -> qss
+        (Left errors) ->
+          error [iii|errores aparecieron en la query: #{errors}|]
+
+      partialQuery = LuQL.SqlGeneration.compileStatements typecheckedStatements.unCompiledQuery
 
   renderPartialQuery partialQuery
 

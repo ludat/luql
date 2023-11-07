@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -28,7 +30,7 @@ newtype RawQuery = RawQuery {unRawQuery :: [QueryStatement Raw]}
 
 data Raw
 
-type instance StmtE _ "ctx" Raw = (Int, Int)
+type instance StmtE _ "ctx" Raw = Range
 
 type instance StmtE "from" "model" Raw = (Maybe Text, QueryExpression Raw)
 
@@ -36,14 +38,21 @@ type instance StmtE "join" "model" Raw = (Maybe Text, QueryExpression Raw)
 
 type instance StmtE "join" "on" Raw = Maybe (QueryExpression Raw)
 
-type instance StmtE "ext" "ext" Raw = Void
+type instance StmtE "ext" "ext" Raw = ExtStmtRaw
 
-type instance ExprE _ "ctx" Raw = (Int, Int)
+data ExtStmtRaw
+  = ExtStmtInvalid (StmtE "invalid" "ctx" Raw) Text
+  deriving (Show, Generic, Eq)
+
+type instance ExprE _ "ctx" Raw = Range
 
 type instance ExprE "apply" "function" Raw = (QueryExpression Raw)
 
-type instance ExprE "ext" "ext" Raw = Void
+type instance ExprE "ext" "ext" Raw = ExtExprRaw
 
+data ExtExprRaw
+  = EmptyExpr (ExprE "empty" "ctx" Raw)
+  deriving (Show, Generic, Eq)
 
 spaceConsumer :: Parser ()
 spaceConsumer =
@@ -70,7 +79,7 @@ identifierParser = lexeme $ takeWhile1P Nothing (\c -> isAlphaNum c || c == '_')
 
 fromParser :: Parser (QueryStatement Raw)
 fromParser = do
-  (p, identifier) <- withPosition $ do
+  (p, identifier) <- withLocation $ do
     _ <- symbol "from"
     expressionParser
   modelName <- optional $ do
@@ -83,16 +92,24 @@ operators :: [Text]
 operators =
   ["<=", "<", ">=", ">", "==", "!=", "&&", "||", "*", "/", "%", "+", "-", "??"]
 
-type Position = (Int, Int)
+type Position = Int
 
-type WithPosition a = (Position, a)
+data Range = Range
+  { begin :: Position
+  , end :: Position
+  } deriving (Eq, Generic, Show)
 
-withPosition :: Parser a -> Parser (WithPosition a)
-withPosition p = do
+nullRange :: Range
+nullRange = Range -1 -1
+
+type Located a = (Range, a)
+
+withLocation :: Parser a -> Parser (Located a)
+withLocation p = do
   initialPosition <- getOffset
   result <- p
   finalPosition <- getOffset
-  pure ((initialPosition, finalPosition), result)
+  pure (Range initialPosition finalPosition, result)
 
 expressionParser :: Parser (QueryExpression Raw)
 expressionParser = do
@@ -125,17 +142,17 @@ expressionParser = do
   where
     infixL :: Text -> Operator Parser (QueryExpression Raw)
     infixL op = InfixL $ do
-      (pos, _) <- withPosition $ symbol op
+      (pos, _) <- withLocation $ symbol op
       pure (\expr1 expr2 ->
         Apply
-          (expr1 & getPos & fst, expr2 & getPos & snd)
+          (Range (expr1 & getPos & (.begin)) (expr2 & getPos & (.end)))
           (Ref pos op)
           [expr1, expr2]
         )
 
     prefix :: Text -> Operator Parser (QueryExpression Raw)
     prefix op = Prefix $ do
-      (pos, _) <- withPosition $ symbol op
+      (pos, _) <- withLocation $ symbol op
       pure (\expr ->
         Apply
           (expr & getPos)
@@ -161,8 +178,9 @@ simpleExpressionParser = do
       <|> try numberParser
       <|> nullParser
       <|> refParser
+      <|> emptyParser
 
-  postfixOperations <- many (eitherP (withPosition applyParser) (withPosition propParser))
+  postfixOperations <- many (eitherP (withLocation applyParser) (withLocation propParser))
   pure $
     foldl
       ( \e postfixOperation ->
@@ -173,13 +191,18 @@ simpleExpressionParser = do
       expr
       postfixOperations
 
+emptyParser :: Parser (QueryExpression Raw)
+emptyParser = do
+  pos <- getOffset
+  pure (ExprExt $ EmptyExpr $ Range pos pos)
+
 ifParser :: Parser (QueryExpression Raw)
 ifParser = do
-  (pos, _) <- withPosition $ symbol "if"
+  (pos, _) <- withLocation $ symbol "if"
   condExpr <- expressionParser
-  _ <- withPosition $ symbol "then"
+  _ <- withLocation $ symbol "then"
   thenExpr <- expressionParser
-  _ <- withPosition $ symbol "else"
+  _ <- withLocation $ symbol "else"
   elseExpr <- expressionParser
   pure $ If pos condExpr thenExpr elseExpr
 
@@ -198,7 +221,7 @@ rawSqlParser = do
   _ <- char '`'
   endPos <- getOffset
   spaceConsumer
-  pure $ RawSql (startPos, endPos) coso
+  pure $ RawSql (Range startPos endPos) coso
 
 applyParser :: Parser [QueryExpression Raw]
 applyParser = do
@@ -207,11 +230,11 @@ applyParser = do
 propParser :: Parser Text
 propParser = do
   _ <- char '.'
-  identifierParser
+  try identifierParser <|> (pure "" <* spaceConsumer)
 
 stringParser :: Parser (QueryExpression Raw)
 stringParser = lexeme $ do
-  (pos, text) <- withPosition $ do
+  (pos, text) <- withLocation $ do
     _ <- char '"'
     text <- takeWhileP Nothing (/= '"')
     _ <- char '"'
@@ -220,36 +243,36 @@ stringParser = lexeme $ do
 
 floatParser :: Parser (QueryExpression Raw)
 floatParser = do
-  (pos, n) <- lexeme $ withPosition $ L.signed spaceConsumer L.float
+  (pos, n) <- lexeme $ withLocation $ L.signed spaceConsumer L.float
   pure $ Lit pos $ LiteralFloat n
 
 boolParser :: Parser (QueryExpression Raw)
 boolParser = do
   (pos, bool) <-
     lexeme $
-      withPosition $
+      withLocation $
         (string "true" >> pure True)
           <|> (string "false" >> pure False)
   pure $ Lit pos $ LiteralBoolean bool
 
 numberParser :: Parser (QueryExpression Raw)
 numberParser = do
-  (pos, n) <- lexeme $ withPosition $ L.signed spaceConsumer L.decimal
+  (pos, n) <- lexeme $ withLocation $ L.signed spaceConsumer L.decimal
   pure $ Lit pos $ LiteralInt n
 
 nullParser :: Parser (QueryExpression Raw)
 nullParser = do
-  (pos, _) <- withPosition $ symbol "null"
+  (pos, _) <- withLocation $ symbol "null"
   pure $ Lit pos LiteralNull
 
 refParser :: Parser (QueryExpression Raw)
 refParser = do
-  (pos, ref) <- withPosition identifierParser
+  (pos, ref) <- withLocation identifierParser
   pure $ Ref pos ref
 
 groupByParser :: Parser (QueryStatement Raw)
 groupByParser = do
-  (pos, _) <- withPosition $ symbol "group"
+  (pos, _) <- withLocation $ symbol "group"
   _ <- symbol "by"
   groupByColumns <- asParser `sepBy1` symbol ","
   lets <-
@@ -265,7 +288,7 @@ orderDirectionParser = do
 
 orderByParser :: Parser (QueryStatement Raw)
 orderByParser = do
-  (pos, _) <- withPosition $ symbol "order"
+  (pos, _) <- withLocation $ symbol "order"
   _ <- symbol "by"
   orderExpr <-
     ( do
@@ -278,7 +301,7 @@ orderByParser = do
 
 returnParser :: Parser (QueryStatement Raw)
 returnParser = do
-  (pos, values) <- withPosition $ do
+  (pos, values) <- withLocation $ do
     _ <- symbol "return"
     expressionParser `sepBy1` symbol ","
   pure $ Return pos values
@@ -293,14 +316,14 @@ asParser = do
 
 whereParser :: Parser (QueryStatement Raw)
 whereParser = do
-  (pos, expr) <- withPosition $ do
+  (pos, expr) <- withLocation $ do
     void $ symbol "where"
     expressionParser
   pure $ Where pos expr
 
 joinParser :: Parser (QueryStatement Raw)
 joinParser = do
-  (pos, identifier) <- withPosition $ do
+  (pos, identifier) <- withLocation $ do
     _ <- symbol "join"
     expressionParser
   modelName <- optional $ do
@@ -313,7 +336,7 @@ joinParser = do
 
 letParser :: Parser (QueryStatement Raw)
 letParser = do
-  (pos, (identifier, expression)) <- withPosition $ do
+  (pos, (identifier, expression)) <- withLocation $ do
     _ <- symbol "let"
     identifier <- identifierParser
     _ <- symbol "="
@@ -323,15 +346,45 @@ letParser = do
 
 statementParser :: Parser (QueryStatement Raw)
 statementParser = do
-  fromParser <|> whereParser <|> returnParser <|> letParser <|> joinParser <|> groupByParser <|> orderByParser
+  fromParser
+  <|> whereParser
+  <|> returnParser
+  <|> letParser
+  <|> joinParser
+  <|> groupByParser
+  <|> orderByParser
+  <|> invalidStatementParser
 
-getPos :: QueryExpression Raw -> (Int, Int)
-getPos (Lit md _) = md
-getPos (Prop md _ _) = md
-getPos (Ref md _) = md
-getPos (Apply md _ _) = md
-getPos (RawSql md _) = md
-getPos (If md _ _ _) = md
+invalidStatementParser :: Parser (QueryStatement Raw)
+invalidStatementParser = do
+  (pos, text) <- withLocation $ takeWhile1P Nothing (\c -> c /= '\n')
+  pure $ StmtExt $ ExtStmtInvalid pos text
+
+
+class HasPosition a where
+  getPos :: a -> Range
+
+instance HasPosition (QueryStatement Raw) where
+  getPos :: QueryStatement Raw -> Range
+  getPos (From pos _) = pos
+  getPos (Where pos _) = pos
+  getPos (GroupBy pos _ _) = pos
+  getPos (Join pos _ _) = pos
+  getPos (Let pos _ _) = pos
+  getPos (OrderBy pos _) = pos
+  getPos (Return pos _) = pos
+  getPos (StmtExt (ExtStmtInvalid pos _)) = pos
+
+
+instance HasPosition (QueryExpression Raw) where
+  getPos :: QueryExpression Raw -> Range
+  getPos (Lit pos _) = pos
+  getPos (Prop pos _ _) = pos
+  getPos (Ref pos _) = pos
+  getPos (Apply pos _ _) = pos
+  getPos (RawSql pos _) = pos
+  getPos (If pos _ _ _) = pos
+  getPos (ExprExt (EmptyExpr pos)) = pos
 
 parser :: Parser RawQuery
 parser = do

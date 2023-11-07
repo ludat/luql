@@ -15,10 +15,10 @@
 
 module LuQL.Compiler where
 
-import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader
-import Control.Monad.State.Strict (StateT (..), get, modify', put)
+import Control.Monad.State.Strict (StateT (..), get, gets, modify', put)
+import Control.Monad.Validate
 
 import Data.Function (on, (&))
 import Data.Map (Map)
@@ -26,6 +26,7 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.String.Interpolate (iii)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Void (Void)
 
 import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
@@ -67,9 +68,9 @@ type instance ExprE "if" "ctx" Compiled = RuntimeType
 
 type instance ExprE "computed" "ctx" Compiled = RuntimeType
 
-type instance ExprE "ext" "ext" Compiled = CompiledExprExt
+type instance ExprE "ext" "ext" Compiled = ExtExprCompiled
 
-data CompiledExprExt
+data ExtExprCompiled
   = ExprCompilationFailed (QueryExpression Raw)
   | ComputedColumn (ExprE "computed" "ctx" Compiled) ColumnDefinition
   | ComputedModel (ExprE "computed" "ctx" Compiled) Text Identifier (Map TableName (ColumnName, ColumnName))
@@ -79,12 +80,12 @@ data CompiledExprExt
 deriving instance
   ( Show (ExprE "computed" "ctx" Compiled)
   ) =>
-  Show CompiledExprExt
+  Show ExtExprCompiled
 
 deriving instance
   ( Eq (ExprE "computed" "ctx" Compiled)
   ) =>
-  Eq CompiledExprExt
+  Eq ExtExprCompiled
 
 instance Show ModelDefinition where
   show ModelDefinition {..} =
@@ -112,7 +113,6 @@ data ModelDefinition = ModelDefinition
     relatedTables :: Map TableName (ColumnName, ColumnName)
   }
 
-
 instantiateModel :: ModelDefinition -> RuntimeType
 instantiateModel model =
   fst $ instantiateModel' model Nothing
@@ -124,7 +124,7 @@ instantiateModel' model (maybeModelName) =
    in (type_, modelName)
 
 data Error
-  = CompilerError Text (Int, Int)
+  = CompilerError Text Range
   deriving (Eq, Show)
 
 data CompiledQuery = CompiledQuery {unCompiledQuery :: [QueryStatement Compiled]}
@@ -133,70 +133,90 @@ data CompiledQuery = CompiledQuery {unCompiledQuery :: [QueryStatement Compiled]
 type Models = Map Text ModelDefinition
 
 compileProgram :: Models -> RawQuery -> Either [Error] CompiledQuery
-compileProgram models (RawQuery qss) =
-  let (compiledStatements, typeInfo) = compileStatements models qss
-   in if null typeInfo.errors
-        then Right $ CompiledQuery compiledStatements
-        else Left typeInfo.errors
+compileProgram models rawQuery =
+  let compilerState = compileProgram' models Nothing rawQuery
+   in if null compilerState.errors
+        then Right $ CompiledQuery compilerState.emitedCompiledStatements
+        else Left compilerState.errors
 
-compileStatements :: Models -> [QueryStatement Raw] -> ([QueryStatement Compiled], TypeInfo)
-compileStatements models qss =
-  ( do
-      coso <- forM qss $ \qs -> do
-        coso <- runExceptT $ compileStatement qs
-        case coso of
-          Left (qs', ti) -> do
-            put ti
-            pure [qs']
-          Right qs' ->
-            pure qs'
-      pure $ mconcat coso
-  )
-    & ( `runStateT`
-          ( TypeInfo
-              { variablesInScope =
-                  Map.toList $
-                    fmap
-                      ( \m ->
-                          ExprExt $ ComputedModelDefinition (ModelDefinitionType) m
-                      )
-                      models,
-                errors = []
-              }
+compileProgram' :: Models -> Maybe Position -> RawQuery -> CompilerState
+compileProgram' models mayPosition (RawQuery qss) =
+  compileStatements qss
+        & runValidateT
+        & ( `runStateT`
+              ( CompilerState
+                { typeInfo = TypeInfo
+                  { variablesInScope = Map.toList $
+                            fmap
+                              ( \m ->
+                                  ExprExt $ ComputedModelDefinition (ModelDefinitionType) m
+                              )
+                              models
+                  }
+                , errors = []
+                , completionIntent = mayPosition
+                , completionResult = []
+                , emitedCompiledStatements = []
+                }
+              )
           )
-      )
-    & runIdentity
+        & runIdentity
+        & snd
 
-type CompilerM = ExceptT (QueryStatement Compiled, TypeInfo) (StateT TypeInfo Identity)
+type Completion = Text
 
-compileStatement :: QueryStatement Raw -> ExceptT (QueryStatement Compiled, TypeInfo) (StateT TypeInfo Identity) [QueryStatement Compiled]
+generateCompletions :: Position -> Models -> RawQuery -> [Completion]
+generateCompletions position models rawQuery =
+  (compileProgram' models (Just position) rawQuery).completionResult
+
+compileStatements :: [QueryStatement Raw] -> CompilerM ()
+compileStatements qss = do
+  void $ forM qss $ \qs -> do
+    void $ tolerate $ compileStatement qs
+
+data CompilerState = CompilerState
+  { typeInfo :: TypeInfo
+  , completionIntent :: Maybe Position
+  , completionResult :: [Completion]
+  , emitedCompiledStatements :: [QueryStatement Compiled]
+  , errors :: [Error]
+  } deriving (Show)
+
+type CompilerM = ValidateT () (StateT CompilerState Identity)
+
+emit :: QueryStatement Compiled -> CompilerM ()
+emit queryStatement = do
+  modify' $ \compilerState ->
+    compilerState {
+      emitedCompiledStatements = compilerState.emitedCompiledStatements ++ [queryStatement]
+    }
+
+compileStatement :: QueryStatement Raw -> CompilerM ()
 compileStatement (From originalPosition (maybeModelAs, modelExpr)) = do
   tcModel <- compileExpression modelExpr
   case tcModel of
     (ExprExt (ComputedModelDefinition _ model)) -> do
       let (runtimeModel, modelName) = instantiateModel' model maybeModelAs
-      modify' $ \typeInfo ->
+      modifyTypeInfo $ \typeInfo ->
         typeInfo
           { variablesInScope =
               typeInfo.variablesInScope
                 ++ [(modelName, ExprExt $ ComputedModel runtimeModel modelName (model.tableName) model.relatedTables)]
           }
-      implicitWheresTC <- case model.implicitWhere of
-        Just implicitWhere -> compileStatement $ Where (0, 0) $ implicitWhere $ modelName
-        Nothing -> pure []
-      pure $ [From () (modelName, model)] ++ implicitWheresTC
-    -- (ValueMetadata (ModelDefinitionType) (ModelDefinitionSource model)) -> do
+      emit $ From () (modelName, model)
+      case model.implicitWhere of
+        Just implicitWhere -> compileStatement $ Where originalPosition $ implicitWhere $ modelName
+        Nothing -> pure ()
     _ -> do
       addError originalPosition [iii|Invalid model|]
-      pure $ [] -- [From originalTypeInfo tcModel]
 compileStatement (Where originalPosition expression) = do
   newWhere <- compileExpression expression
   unless (getType newWhere `matchesType` BooleanType) $ do
     addError originalPosition [iii|wrong type, expected boolean|]
 
-  pure [Where () newWhere]
+  emit $ Where () newWhere
 compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr) = do
-  originalTypeInfo <- get
+  originalTypeInfo <- getTypeInfo
 
   otherModelExpr <- compileExpression modelExpr
   newModelToJoin <- case otherModelExpr of
@@ -206,11 +226,10 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
       addCatastrophicError
         [iii|value to join is not a model|]
         originalPosition
-        (StmtExt $ StmtCompilationFailed e)
 
   let (otherRuntimeModel, otherModelName) = instantiateModel' newModelToJoin maybeModelAs
 
-  modify' $ \typeInfo ->
+  modifyTypeInfo $ \typeInfo ->
     typeInfo
       { variablesInScope =
           (otherModelName, ExprExt $ ComputedModel otherRuntimeModel otherModelName newModelToJoin.tableName newModelToJoin.relatedTables)
@@ -237,7 +256,6 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
                   addCatastrophicError
                     [iii|no model to join available|]
                     originalPosition
-                    (StmtExt $ StmtCompilationFailed $ e)
               ) pure
 
 
@@ -264,13 +282,16 @@ compileStatement e@(Join originalPosition (maybeModelAs, modelExpr) mayJoinExpr)
                   Prop originalPosition (Ref originalPosition otherModelName) $ fromIdentifier myColumn
                 ]
 
-  pure
-    $ [Join () (otherModelName, newModelToJoin) joinExpression]
+  emit $ Join () (otherModelName, newModelToJoin) joinExpression
 compileStatement (GroupBy _ groupByColumns letStatements) = do
   _ <- compileAndSetTheNewTypeInfo Tag groupByColumns
-  definitions <- mconcat <$> mapM compileStatementAndTag letStatements
+  originalCompilerState <- get
+  put originalCompilerState { emitedCompiledStatements = [] }
+  _ <- tolerate $ mapM compileStatementAndTag letStatements
+  afterDefinitionsCompilerState <- get
+  put afterDefinitionsCompilerState { emitedCompiledStatements = originalCompilerState.emitedCompiledStatements }
   tg <- compileAndSetTheNewTypeInfo Discard groupByColumns
-  pure [GroupBy () tg definitions]
+  emit $ GroupBy () tg (afterDefinitionsCompilerState.emitedCompiledStatements)
   where
     compileStatementAndTag stmt = do
       case stmt of
@@ -294,7 +315,7 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
         _ ->
           compileStatement stmt
     compileAndSetTheNewTypeInfo tagOrDiscard columns = do
-      oldTypeInfo <- get
+      oldTypeInfo <- getTypeInfo
       compiledColumns <- forM columns $ \(column, name) -> do
         compiledExpression <- compileExpression column
         pure (compiledExpression, name)
@@ -367,15 +388,17 @@ compileStatement (Let _originalPosition name expression) = do
                ]
       }
 
-  pure [Let () name e]
+  emit $ Let () name e
 compileStatement (Return _ exprs) = do
   tExprs <- mapM compileExpression exprs
-  pure [Return () tExprs]
+  emit $ Return () tExprs
 compileStatement (OrderBy _ exprs) = do
   tExprs <- forM exprs $ \(expr, dir) -> do
     compiledExpr <- compileExpression expr
     pure (compiledExpr, dir)
-  pure [OrderBy () tExprs]
+  emit $ OrderBy () tExprs
+compileStatement (StmtExt (ExtStmtInvalid pos t)) = do
+  addCatastrophicError [iii|Invalid statement: #{t}|] pos
 
 data TagOrDiscard = Tag | Discard
   deriving (Show, Eq)
@@ -404,7 +427,7 @@ data ColumnDefinition = ColumnDefinition
 data RuntimeFunction = RuntimeFunction
   { rFuncNotation :: FunctionNotation,
     rFuncName :: Text,
-    rFuncCheckTypes :: forall m. (HasTypeInfo m) => (Int, Int) -> [QueryExpression Raw] -> m ([QueryExpression Compiled], RuntimeType)
+    rFuncCheckTypes :: Range -> [QueryExpression Raw] -> CompilerM ([QueryExpression Compiled], RuntimeType)
   }
 
 instance Show RuntimeFunction where
@@ -431,11 +454,9 @@ data RuntimeType
 
 newtype FunctionTypeChecker
   = FunctionTypeChecker
-      ( forall m.
-        (HasTypeInfo m) =>
-        (Int, Int) ->
+      ( Range ->
         [QueryExpression Raw] ->
-        m ([QueryExpression Compiled], RuntimeType, (Text, [RuntimeType]))
+        CompilerM ([QueryExpression Compiled], RuntimeType, (Text, [RuntimeType]))
       )
 
 instance Show FunctionTypeChecker where
@@ -445,8 +466,7 @@ instance Eq FunctionTypeChecker where
   _ == _ = False
 
 data TypeInfo = TypeInfo
-  { variablesInScope :: [(Text, QueryExpression Compiled)],
-    errors :: [Error]
+  { variablesInScope :: [(Text, QueryExpression Compiled)]
   }
   deriving (Show)
 
@@ -455,9 +475,9 @@ type TypeCheckM =
 
 instance HasTypeInfo CompilerM where
   getTypeInfo =
-    get
-  putTypeInfo typeInfo =
-    put typeInfo
+    gets (.typeInfo)
+  putTypeInfo newTypeInfo =
+    modify' $ \compilerState -> compilerState { typeInfo = newTypeInfo }
 
 instance (Monad m) => HasTypeInfo (StateT TypeInfo m) where
   getTypeInfo =
@@ -481,18 +501,25 @@ qualifyIdentifier :: Identifier -> Identifier -> QualifiedIdentifier
 qualifyIdentifier table column =
   QualifiedIdentifier (Just $ fromIdentifier table) (fromIdentifier column)
 
-compileExpression :: (HasTypeInfo m) => QueryExpression Raw -> m (QueryExpression Compiled)
+compileExpression :: QueryExpression Raw -> CompilerM (QueryExpression Compiled)
 compileExpression (Lit _ (LiteralString t)) = pure $ Lit (lit StringType) $ LiteralString t
 compileExpression (Lit _ (LiteralInt n)) = pure $ Lit (lit IntType) $ LiteralInt n
 compileExpression (Lit _ (LiteralFloat n)) = pure $ Lit (lit FloatType) $ LiteralFloat n
 compileExpression (Lit _ (LiteralBoolean b)) = pure $ Lit (lit BooleanType) $ LiteralBoolean b
 compileExpression (Lit _ (LiteralNull)) = pure $ Lit (lit NullType) LiteralNull
-compileExpression expression@(Prop pos expr propName) = do
+compileExpression expression@(Prop srcRange expr propName) = do
   tExpr <- compileExpression expr
   case tExpr of
     (ExprExt (ComputedModel (ModelType m) n _ _)) -> case Map.lookup (Identifier propName) m of
       Nothing -> do
-        addError pos [iii|#{expr} no tiene una propiedad: #{propName}|]
+        addError srcRange [iii|#{expr} no tiene una propiedad: #{propName}|]
+        completeWith srcRange $ \completionPosition -> do
+          let stringUntilComplPos = propName & T.take (completionPosition - srcRange.begin)
+          m
+            & Map.toList
+            & filter (\(Identifier prop, _) -> T.isPrefixOf stringUntilComplPos prop)
+            & fmap (\(Identifier prop, _) -> prop)
+            & pure
         pure $ ExprExt $ ExprCompilationFailed $ expression
       Just ty -> do
         pure $
@@ -501,93 +528,93 @@ compileExpression expression@(Prop pos expr propName) = do
     (ExprExt (ComputedModelDefinition _ _)) ->
       pure $ RawSql AnyType [Left "select centros.id from centro_de_costos centros left join centro_de_costos subcentros on centros.sub_centro_de_id=subcentros.id where centros.id= 227 or (centros.sub_centro_de_id = 227) or (subcentros.sub_centro_de_id = 227)"]
     -- -- TODO podria definirle propiedades a cosas que no sean tablas :thinking:
-    _ -> case getType tExpr of
-      IntType -> do
-        case propName of
-          "even" -> do
-            compileExpression
-              ( Apply
-                  (0, 0)
-                  (Ref (0, 0) "==")
-                  [ Apply (0, 0) (Ref (0, 0) "%") [expr, Lit (0, 0) $ LiteralInt 2],
-                    Lit (0, 0) $ LiteralInt 0
-                  ]
-              )
-          "in" -> do
-            let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
-                  tExprs <- forM paramExprs $ \e -> do
-                    (getPos e,) <$> compileExpression e
-                  case tExprs of
-                    [(_p1, e1)] -> do
-                      pure ([tExpr, e1], BooleanType, ("in", [getType tExpr, getType e1]))
-                    _ -> do
-                      addError pos [iii|max expects one parameter|]
-                      pure ([], IntType, undefined)
-            pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
-          _ -> do
-            addError pos [iii|Int doesn't have prop '#{propName}'|]
-            pure $ ExprExt $ ExprCompilationFailed expression
-      StringType -> do
-        case propName of
-          "length" -> do
-            compileExpression
-              ( Apply
-                  (0, 0)
-                  (Ref (0, 0) "char_length")
-                  [ expr
-                  ]
-              )
-          _ -> do
-            addError pos [iii|Int doesn't have prop '#{propName}'|]
-            pure $ ExprExt $ ExprCompilationFailed expression
-      DateType -> do
-        case propName of
-          "between" -> do
-            let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
-                  tExprs <- forM paramExprs $ \e -> do
-                    (getPos e,) <$> compileExpression e
-                  case tExprs of
-                    [(p1, e1), (p2, e2)] -> do
-                      unless (getType e1 `matchesType` StringType) $
-                        addError p1 [iii|expected type is String but got #{getType e1}|]
-                      unless (getType e2 `matchesType` StringType) $
-                        addError p2 [iii|expected type is String but got #{getType e2}|]
-                      pure ([tExpr, e1, e2], BooleanType, ("date_between", [getType tExpr, getType e1, getType e2]))
-                    _ -> do
-                      addError pos [iii|max expects one parameter|]
-                      pure ([], IntType, undefined)
-            pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
-          "year" -> do
-            compileExpression
-              ( Apply
-                  (0, 0)
-                  (Ref (0, 0) "extract_year")
-                  [ expr
-                  ]
-              )
-          "month" -> do
-            compileExpression
-              ( Apply
-                  (0, 0)
-                  (Ref (0, 0) "extract_month")
-                  [ expr
-                  ]
-              )
-          _ -> do
-            addError pos [iii|Int doesn't have prop '#{propName}'|]
-            pure $ ExprExt $ ExprCompilationFailed expression
+    _ -> case (getType tExpr, propName) of
+      -- (_, "pg_type") -> do
+      --   compileExpression
+      --     ( Apply
+      --         (0, 0)
+      --         (Ref (0, 0) "pg_typeof")
+      --         [ expr
+      --         ]
+      --     )
+      (IntType, "even") -> do
+        compileExpression
+          ( Apply
+              nullRange
+              (Ref nullRange "==")
+              [ Apply nullRange (Ref nullRange "%") [expr, Lit nullRange $ LiteralInt 2],
+                Lit nullRange $ LiteralInt 0
+              ]
+          )
+      (IntType, "in") -> do
+        let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
+              tExprs <- forM paramExprs $ \e -> do
+                (getPos e,) <$> compileExpression e
+              case tExprs of
+                [(_p1, e1)] -> do
+                  pure ([tExpr, e1], BooleanType, ("in", [getType tExpr, getType e1]))
+                _ -> do
+                  addError srcRange [iii|max expects one parameter|]
+                  pure ([], IntType, undefined)
+        pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
+      (IntType, _) -> do
+        addError srcRange [iii|Int doesn't have prop '#{propName}'|]
+        completeWith srcRange $ \_complPos -> pure ["in", "even"]
+        pure $ ExprExt $ ExprCompilationFailed expression
+      (StringType, "length") -> do
+        compileExpression
+          ( Apply
+              nullRange
+              (Ref nullRange "char_length")
+              [ expr
+              ]
+          )
+      (StringType, _) -> do
+        addError srcRange [iii|Int doesn't have prop '#{propName}'|]
+        completeWith srcRange $ \_complPos -> pure ["length"]
+        pure $ ExprExt $ ExprCompilationFailed expression
+      (DateType, "between") -> do
+        let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
+              tExprs <- forM paramExprs $ \e -> do
+                (getPos e,) <$> compileExpression e
+              case tExprs of
+                [(p1, e1), (p2, e2)] -> do
+                  unless (getType e1 `matchesType` StringType) $
+                    addError p1 [iii|expected type is String but got #{getType e1}|]
+                  unless (getType e2 `matchesType` StringType) $
+                    addError p2 [iii|expected type is String but got #{getType e2}|]
+                  pure ([tExpr, e1, e2], BooleanType, ("date_between", [getType tExpr, getType e1, getType e2]))
+                _ -> do
+                  addError srcRange [iii|max expects one parameter|]
+                  pure ([], IntType, undefined)
+        pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
+      (DateType, "year") -> do
+        compileExpression
+          ( Apply
+              nullRange
+              (Ref nullRange "extract_year")
+              [ expr
+              ]
+          )
+      (DateType, "month") -> do
+        compileExpression
+          ( Apply
+              nullRange
+              (Ref nullRange "extract_month")
+              [ expr
+              ]
+          )
+      (DateType, _) -> do
+        addError srcRange [iii|Int doesn't have prop '#{propName}'|]
+        completeWith srcRange $ \_complPos -> pure ["between", "year", "month"]
+        pure $ ExprExt $ ExprCompilationFailed expression
       _ -> do
-        addError pos [iii|1 eso no tiene una propiedad: #{getType tExpr}|]
+        addError srcRange [iii|1 eso no tiene una propiedad: #{getType tExpr}|]
         pure $
           ExprExt $
             ExprCompilationFailed expression
-compileExpression (Ref originalPosition name) = do
-  if name == "_"
-    then do
-      addError originalPosition [iii|encontre un agujero|]
-      pure $ Ref malo name
-    else do
-      resolveName (addError originalPosition) name
+compileExpression (Ref pos name) = do
+  resolveName pos name
 compileExpression (Apply pos function params) = do
   typecheckedFunction <- compileExpression function
   (typecheckedParams, returnType, resolvedFunction) <- case typecheckedFunction of
@@ -614,6 +641,28 @@ compileExpression (If _pos condExpr thenExpr elseExpr) = do
     addError (getPos elseExpr) [iii|El else y el then deberian matchear pero #{getType tcThenExpr} es diferente que #{getType tcElseExpr}|]
 
   pure $ If (getType tcThenExpr) tcCondExpr tcThenExpr tcElseExpr
+compileExpression (ExprExt (EmptyExpr pos)) = do
+  addError pos [iii|Missing expression|]
+  completeAllLocalVars pos
+  pure $ Lit (lit NullType) LiteralNull
+
+completeWith :: Range -> (Int -> CompilerM [Completion]) -> CompilerM ()
+completeWith range f =
+  gets (.completionIntent) >>= \case
+    Just complPos | range.begin <= complPos && complPos <= range.end -> do
+      completions <- f complPos
+      modify' $ \cs -> cs
+        { completionResult = completions
+        }
+    _ -> pure ()
+
+completeAllLocalVars :: Range -> CompilerM ()
+completeAllLocalVars range =
+  completeWith range $ \_complPos -> do
+    ty <- getTypeInfo
+    ty.variablesInScope
+      & fmap (\(name, _) -> name)
+      & pure
 
 getType :: QueryExpression Compiled -> RuntimeType
 getType (Lit ty _) = ty
@@ -797,6 +846,17 @@ nativeFunctions =
               addError pos [iii|extract_month needs one parameter|]
               pure ([], IntType, undefined)
       )
+      -- , ( "pg_typeof",
+      --   FunctionTypeChecker $ \pos paramExprs -> do
+      --     tExprs <- forM paramExprs $ \e -> do
+      --       (getPos e,) <$> compileExpression e
+      --     case tExprs of
+      --       [(_p1, e1)] -> do
+      --         pure ([e1], StringType, ("pg_typeof", [getType e1]))
+      --       _ -> do
+      --         addError pos [iii|pg_typeof needs one parameter|]
+      --         pure ([], StringType, undefined)
+      -- )
       , ( "count_distinct",
         FunctionTypeChecker $ \pos paramExprs -> do
           tExprs <- forM paramExprs $ \e -> do
@@ -831,9 +891,18 @@ data FunctionNotation
   | DefaultNotation
   deriving (Eq, Show)
 
-resolveName :: (HasTypeInfo m) => (Text -> m ()) -> Text -> m (QueryExpression Compiled)
-resolveName addError' name = do
+resolveName :: Range -> Text -> CompilerM (QueryExpression Compiled)
+resolveName pos name = do
   TypeInfo {..} <- getTypeInfo
+
+  completeWith pos $ \complPos -> do
+    let stringUntilComplPos =
+          name & T.take (complPos - pos.begin)
+    variablesInScope
+      & filter (\(n, _) -> T.isPrefixOf stringUntilComplPos n)
+      & fmap (\(n, _) -> n)
+      & pure
+
   let inTopLevelDefs =
         variablesInScope
           & filter (\(n, _) -> n == name)
@@ -847,26 +916,22 @@ resolveName addError' name = do
     ([], Just f) ->
       pure $ ExprExt $ ComputedFunction (FunctionType f) f
     ([], Nothing) -> do
-      addError' [iii|reference not found: '#{name}'|]
-      pure $ ExprExt $ ExprCompilationFailed $ Lit (0, 0) $ LiteralString "mori"
+      addCatastrophicError [iii|reference not found: '#{name}'|] pos
     ((_, val) : _, _) ->
       pure val
 
-addError :: (HasTypeInfo m) => (Int, Int) -> Text -> m ()
+addError :: Range -> Text -> CompilerM ()
 addError pos newError =
-  modifyTypeInfo $ \ti ->
-    ti
-      { errors = ti.errors ++ [CompilerError newError pos]
+  modify' $ \cs ->
+    cs
+      { errors = cs.errors ++ [CompilerError newError pos]
       }
 
 addCatastrophicError ::
-  forall a m.
-  (HasTypeInfo m, MonadError (QueryStatement Compiled, TypeInfo) m) =>
+  forall a.
   Text ->
-  (Int, Int) ->
-  QueryStatement Compiled ->
-  m a
-addCatastrophicError newError position expr = do
+  Range ->
+  CompilerM a
+addCatastrophicError newError position = do
   addError position newError
-  ti <- getTypeInfo
-  throwError (expr, ti)
+  refute ()
