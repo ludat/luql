@@ -1,0 +1,16 @@
+Right
+  RawQuery
+    { unRawQuery =
+        [ StmtExt (ExtStmtEmptyLine Range { begin = 0 , end = 0 })
+        , From
+            Range { begin = 1 , end = 15 }
+            ( Nothing , Ref Range { begin = 6 , end = 15 } "Languages" )
+        , Let
+            Range { begin = 16 , end = 25 }
+            "a"
+            (Lit Range { begin = 24 , end = 25 } (LiteralInt 7))
+        , StmtExt (ExtStmtEmptyLine Range { begin = 26 , end = 26 })
+        , StmtExt (ExtStmtEmptyLine Range { begin = 38 , end = 38 })
+        , StmtExt (ExtStmtEmptyLine Range { begin = 39 , end = 39 })
+        ]
+    }

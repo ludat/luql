@@ -42,6 +42,7 @@ type instance StmtE "ext" "ext" Raw = ExtStmtRaw
 
 data ExtStmtRaw
   = ExtStmtInvalid (StmtE "invalid" "ctx" Raw) Text
+  | ExtStmtEmptyLine (StmtE "invalid" "ctx" Raw)
   deriving (Show, Generic, Eq)
 
 type instance ExprE _ "ctx" Raw = Range
@@ -51,7 +52,7 @@ type instance ExprE "apply" "function" Raw = (QueryExpression Raw)
 type instance ExprE "ext" "ext" Raw = ExtExprRaw
 
 data ExtExprRaw
-  = EmptyExpr (ExprE "empty" "ctx" Raw)
+  = ExtExprEmptyExpr (ExprE "empty" "ctx" Raw)
   deriving (Show, Generic, Eq)
 
 spaceConsumer :: Parser ()
@@ -194,7 +195,7 @@ simpleExpressionParser = do
 emptyParser :: Parser (QueryExpression Raw)
 emptyParser = do
   pos <- getOffset
-  pure (ExprExt $ EmptyExpr $ Range pos pos)
+  pure (ExprExt $ ExtExprEmptyExpr $ Range pos pos)
 
 ifParser :: Parser (QueryExpression Raw)
 ifParser = do
@@ -278,8 +279,8 @@ groupByParser = do
   lets <-
     between
       (L.symbol spaceConsumerWithNewline "{")
-      (L.symbol spaceConsumerWithNewline "}")
-      (many (letParser <* spaceConsumerWithNewline))
+      (L.symbol spaceConsumer "}")
+      (many (letParser <* spaceConsumer <* eol))
   pure $ GroupBy pos groupByColumns lets
 
 orderDirectionParser :: Parser OrderDirection
@@ -353,11 +354,19 @@ statementParser = do
   <|> joinParser
   <|> groupByParser
   <|> orderByParser
+  <|> emptyLineParser
   <|> invalidStatementParser
+
+emptyLineParser :: Parser (QueryStatement Raw)
+emptyLineParser = do
+  pos <- getOffset
+  void $ optional spaceConsumer
+
+  pure $ StmtExt $ ExtStmtEmptyLine (Range pos pos)
 
 invalidStatementParser :: Parser (QueryStatement Raw)
 invalidStatementParser = do
-  (pos, text) <- withLocation $ takeWhile1P Nothing (\c -> c /= '\n')
+  (pos, text) <- withLocation $ takeWhile1P Nothing (/= '\n')
   pure $ StmtExt $ ExtStmtInvalid pos text
 
 class HasSrcRange a where
@@ -373,6 +382,7 @@ instance HasSrcRange (QueryStatement Raw) where
   getSrcRange (OrderBy pos _) = pos
   getSrcRange (Return pos _) = pos
   getSrcRange (StmtExt (ExtStmtInvalid pos _)) = pos
+  getSrcRange (StmtExt (ExtStmtEmptyLine pos)) = pos
 
 
 instance HasSrcRange (QueryExpression Raw) where
@@ -383,12 +393,11 @@ instance HasSrcRange (QueryExpression Raw) where
   getSrcRange (Apply pos _ _) = pos
   getSrcRange (RawSql pos _) = pos
   getSrcRange (If pos _ _ _) = pos
-  getSrcRange (ExprExt (EmptyExpr pos)) = pos
+  getSrcRange (ExprExt (ExtExprEmptyExpr pos)) = pos
 
 parser :: Parser RawQuery
 parser = do
-  spaceConsumerWithNewline
-  RawQuery <$> many (statementParser <* spaceConsumerWithNewline)
+  RawQuery <$> ((statementParser <* spaceConsumer) `sepBy` eol)
 
 parseQuery :: Text -> Either (ParseErrorBundle Text Void) RawQuery
 parseQuery = parse (parser <* eof) ""

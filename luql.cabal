@@ -37,12 +37,12 @@ common deps
     , bytestring
     , containers
     , megaparsec
+    , monad-validate
     , mtl
     , parser-combinators
     , postgresql-query
     , postgresql-simple
     -- , pretty-simple
-    , monad-validate
     , safe
     , scientific
     , string-interpolate

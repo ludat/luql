@@ -399,6 +399,8 @@ compileStatement (OrderBy _ exprs) = do
   emit $ OrderBy () tExprs
 compileStatement (StmtExt (ExtStmtInvalid srcRange t)) = do
   addCatastrophicError [iii|Invalid statement: #{t}|] srcRange
+compileStatement (StmtExt (ExtStmtEmptyLine srcRange)) = do
+  completeAllLocalVars srcRange
 
 data TagOrDiscard = Tag | Discard
   deriving (Show, Eq)
@@ -641,10 +643,9 @@ compileExpression (If _srcRange condExpr thenExpr elseExpr) = do
     addError (getSrcRange elseExpr) [iii|El else y el then deberian matchear pero #{getType tcThenExpr} es diferente que #{getType tcElseExpr}|]
 
   pure $ If (getType tcThenExpr) tcCondExpr tcThenExpr tcElseExpr
-compileExpression (ExprExt (EmptyExpr srcRange)) = do
-  addError srcRange [iii|Missing expression|]
+compileExpression (ExprExt (ExtExprEmptyExpr srcRange)) = do
   completeAllLocalVars srcRange
-  pure $ Lit (lit NullType) LiteralNull
+  addCatastrophicError [iii|Missing expression|] srcRange
 
 completeWith :: Range -> (Int -> CompilerM [Completion]) -> CompilerM ()
 completeWith range f =

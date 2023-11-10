@@ -2,7 +2,7 @@ module LangSpec
     ( spec
     ) where
 
-import Control.Exception (bracket)
+import Control.Exception (bracket, evaluate)
 
 import Data.Function ((&))
 import Data.String.Interpolate
@@ -24,12 +24,13 @@ import LuQL.Runner (SqlRuntimeRow (..))
 import LuQL.SqlGeneration qualified
 
 import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.Timeout
 
 import Test.Syd
 
 import Tests.Utils (models)
 
-import Text.Megaparsec (ParseErrorBundle)
+import Text.Megaparsec (ParseErrorBundle, errorBundlePretty)
 
 spec :: Spec
 spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
@@ -37,6 +38,37 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
     [__i|
       from Languages
     |]
+
+  itMatchesSnapshot "query with a newline"
+    [__i|
+      from Languages
+
+      let a = 7
+    |]
+
+  itMatchesSnapshot "query with a newline before beginning of the query"
+    [i|
+
+
+from Languages
+let a = 7
+|]
+
+  itMatchesSnapshot "query with a comment before beginning of the query"
+    [i|
+
+-- comments
+from Languages
+let a = 7
+|]
+
+  itMatchesSnapshot "query with a comment after the end of the query"
+    [i|
+from Languages
+let a = 7
+-- comments
+
+|]
 
   itMatchesSnapshot "from model assigning a different name"
     [__i|
@@ -103,16 +135,19 @@ spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
       let a = 23
       from Languages
     |]
+
   itMatchesSnapshot "a single join with a rename"
     [__i|
         from Languages as l
         join Films
     |]
+
   itMatchesSnapshot "a return keeps a simple column"
     [__i|
         let a = 7
         return a
     |]
+
   itMatchesSnapshot "a return keeps a model column"
     [__i|
         from Languages as l
@@ -129,7 +164,6 @@ shouldMatchSnapshot :: (HasCallStack, Show a) => a -> String -> IO ()
 shouldMatchSnapshot actualToShow filepath = do
   let actual = actualToShow & ppShow & Text.pack
   shouldMatchSnapshot' actual filepath
-
 
 shouldMatchSnapshot' :: HasCallStack => Text -> String -> IO ()
 shouldMatchSnapshot' actual filepath = do
@@ -148,9 +182,9 @@ itMatchesSnapshot name program = describe name $ do
     context "original program" $
       program `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/0_Raw.golden|]
 
-    let parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
-        parsedProgram =
-          parseQuery program
+    parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
+      <- timeout 100_000 (evaluate (parseQuery program))
+        & fmap (maybe (error "timeout parsing") id)
 
     context "parsed program" $
       parsedProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/1_Parser.golden|]
@@ -158,7 +192,7 @@ itMatchesSnapshot name program = describe name $ do
     let compiledProgram :: Either [Error] CompiledQuery
         compiledProgram =
           parsedProgram
-            & either (error . show) id
+            & either (error . errorBundlePretty) id
             & compileProgram models
 
     context "compiled program" $
