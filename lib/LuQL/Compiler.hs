@@ -171,7 +171,7 @@ generateCompletions position models rawQuery =
 
 compileStatements :: [QueryStatement Raw] -> CompilerM ()
 compileStatements qss = do
-  void $ forM qss $ \qs -> do
+  forM_ qss $ \qs -> do
     void $ tolerate $ compileStatement qs
 
 data CompilerState = CompilerState
