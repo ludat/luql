@@ -35,6 +35,7 @@ import LuQL.Parser
 import LuQL.Types
 
 import Safe (headMay)
+import GHC.Generics (Generic)
 
 data Compiled
 
@@ -163,7 +164,10 @@ compileProgram' models mayPosition (RawQuery qss) =
         & runIdentity
         & snd
 
-type Completion = Text
+data Completion = Completion
+  { newText :: Text
+  , from :: Position
+  } deriving (Show, Eq, Generic)
 
 generateCompletions :: Position -> Models -> RawQuery -> [Completion]
 generateCompletions position models rawQuery =
@@ -291,7 +295,7 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
   afterDefinitionsCompilerState <- get
   put afterDefinitionsCompilerState { emitedCompiledStatements = originalCompilerState.emitedCompiledStatements }
   tg <- compileAndSetTheNewTypeInfo Discard groupByColumns
-  emit $ GroupBy () tg (afterDefinitionsCompilerState.emitedCompiledStatements)
+  emit $ GroupBy () tg afterDefinitionsCompilerState.emitedCompiledStatements
   where
     compileStatementAndTag stmt = do
       case stmt of
@@ -299,8 +303,7 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
           ret <- compileStatement stmt
           modifyTypeInfo $ \ty ->
             ty {
-              variablesInScope = (
-                ty.variablesInScope
+              variablesInScope = ty.variablesInScope
                 & fmap (\(n, v) -> if n /= name
                   then (n, v)
                   else case v of
@@ -309,7 +312,6 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
                     _ ->
                       (n, v)
                   )
-              )
             }
           pure ret
         _ ->
@@ -423,8 +425,7 @@ class (Monad m) => HasTypeInfo m where
 
 data ColumnDefinition = ColumnDefinition
   { column :: QualifiedIdentifier
-  }
-  deriving (Show, Eq)
+  } deriving (Show, Eq)
 
 data RuntimeFunction = RuntimeFunction
   { rFuncNotation :: FunctionNotation,
@@ -520,7 +521,7 @@ compileExpression expression@(Prop srcRange expr propName) = do
           m
             & Map.toList
             & filter (\(Identifier prop, _) -> T.isPrefixOf stringUntilComplPos prop)
-            & fmap (\(Identifier prop, _) -> prop)
+            & fmap (\(Identifier prop, _) -> Completion { newText = prop, from = srcRange.begin + 1 })
             & pure
         pure $ ExprExt $ ExprCompilationFailed $ expression
       Just ty -> do
@@ -561,7 +562,10 @@ compileExpression expression@(Prop srcRange expr propName) = do
         pure $ ExprExt $ ComputedFunction (FunctionType functionTypeChecker) functionTypeChecker
       (IntType, _) -> do
         addError srcRange [iii|Int doesn't have prop '#{propName}'|]
-        completeWith srcRange $ \_complPos -> pure ["in", "even"]
+        completeWith srcRange $ \_complPos -> pure
+          [ Completion { newText = "in", from = srcRange.begin }
+          , Completion { newText = "even", from = srcRange.begin }
+          ]
         pure $ ExprExt $ ExprCompilationFailed expression
       (StringType, "length") -> do
         compileExpression
@@ -573,7 +577,9 @@ compileExpression expression@(Prop srcRange expr propName) = do
           )
       (StringType, _) -> do
         addError srcRange [iii|Int doesn't have prop '#{propName}'|]
-        completeWith srcRange $ \_complPos -> pure ["length"]
+        completeWith srcRange $ \_complPos -> pure
+          [ Completion { newText = "length", from = srcRange.begin }
+          ]
         pure $ ExprExt $ ExprCompilationFailed expression
       (DateType, "between") -> do
         let functionTypeChecker = FunctionTypeChecker $ \_ paramExprs -> do
@@ -608,7 +614,11 @@ compileExpression expression@(Prop srcRange expr propName) = do
           )
       (DateType, _) -> do
         addError srcRange [iii|Int doesn't have prop '#{propName}'|]
-        completeWith srcRange $ \_complPos -> pure ["between", "year", "month"]
+        completeWith srcRange $ \_complPos -> pure
+          [ Completion "between" srcRange.begin
+          , Completion "year" srcRange.begin
+          , Completion "month" srcRange.begin
+          ]
         pure $ ExprExt $ ExprCompilationFailed expression
       _ -> do
         addError srcRange [iii|1 eso no tiene una propiedad: #{getType tExpr}|]
@@ -659,10 +669,10 @@ completeWith range f =
 
 completeAllLocalVars :: Range -> CompilerM ()
 completeAllLocalVars range =
-  completeWith range $ \_complPos -> do
+  completeWith range $ \complPos -> do
     ty <- getTypeInfo
     ty.variablesInScope
-      & fmap (\(name, _) -> name)
+      & fmap (\(name, _) -> Completion { newText = name, from = complPos })
       & pure
 
 getType :: QueryExpression Compiled -> RuntimeType
@@ -901,7 +911,7 @@ resolveName srcRange name = do
           name & T.take (complPos - srcRange.begin)
     variablesInScope
       & filter (\(n, _) -> T.isPrefixOf stringUntilComplPos n)
-      & fmap (\(n, _) -> n)
+      & fmap (\(n, _) -> Completion { newText = n, from = srcRange.begin })
       & pure
 
   let inTopLevelDefs =
