@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module LuQL.Parser where
@@ -88,10 +87,6 @@ fromParser = do
     identifierParser
 
   pure $ From p (modelName, identifier)
-
-operators :: [Text]
-operators =
-  ["<=", "<", ">=", ">", "==", "!=", "&&", "||", "*", "/", "%", "+", "-", "??"]
 
 type Position = Int
 

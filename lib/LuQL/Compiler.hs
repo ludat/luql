@@ -402,7 +402,14 @@ compileStatement (OrderBy _ exprs) = do
 compileStatement (StmtExt (ExtStmtInvalid srcRange t)) = do
   addCatastrophicError [iii|Invalid statement: #{t}|] srcRange
 compileStatement (StmtExt (ExtStmtEmptyLine srcRange)) = do
-  completeAllLocalVars srcRange
+  completeWith srcRange $ \complPos -> do
+    pure
+      [ Completion "from" srcRange.begin
+      , Completion "where" srcRange.begin
+      , Completion "group by" srcRange.begin
+      , Completion "order by" srcRange.begin
+      , Completion "let" srcRange.begin
+      ]
 
 data TagOrDiscard = Tag | Discard
   deriving (Show, Eq)
@@ -523,7 +530,7 @@ compileExpression expression@(Prop srcRange expr propName) = do
             & filter (\(Identifier prop, _) -> T.isPrefixOf stringUntilComplPos prop)
             & fmap (\(Identifier prop, _) -> Completion { newText = prop, from = srcRange.begin + 1 })
             & pure
-        pure $ ExprExt $ ExprCompilationFailed $ expression
+        pure $ ExprExt $ ExprCompilationFailed expression
       Just ty -> do
         pure $
           ExprExt $
