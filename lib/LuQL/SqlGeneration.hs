@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module LuQL.SqlGeneration where
@@ -38,12 +38,12 @@ data SqlExpression
   deriving (Eq, Show)
 
 data PartialQuery = PartialQuery
-  { fromTable :: Maybe PartialFromTable,
-    selectedColumns :: [SelectedColumn],
-    wheres :: [SqlExpression],
-    joins :: [(Table, [SqlExpression])],
-    groupBy :: Maybe GroupByDefinition,
-    orderBy :: [(SqlExpression, Maybe T.OrderDirection)]
+  { fromTable :: Maybe PartialFromTable
+  , selectedColumns :: [SelectedColumn]
+  , wheres :: [SqlExpression]
+  , joins :: [(Table, [SqlExpression])]
+  , groupBy :: Maybe GroupByDefinition
+  , orderBy :: [(SqlExpression, Maybe T.OrderDirection)]
   }
   deriving (Eq, Show)
 
@@ -59,9 +59,9 @@ data SelectedColumn
   deriving (Eq, Show)
 
 data Table = FromTable
-  { getTableName :: T.TableName,
-    getTableAlias :: T.TableName,
-    getTableColumns :: [T.ColumnName]
+  { getTableName :: T.TableName
+  , getTableAlias :: T.TableName
+  , getTableColumns :: [T.ColumnName]
   }
   deriving (Eq, Show)
 
@@ -72,14 +72,15 @@ class HasPartialQuery m where
   getPartialQuery :: m PartialQuery
   putPartialQuery :: PartialQuery -> m ()
 
-type CompileM =
-  StateT CompileState Identity
+type CompileM = StateT CompileState Identity
 
 newtype CompileState = CompileState {compileStatePartialQuery :: PartialQuery}
 
 instance HasPartialQuery CompileM where
+  getPartialQuery :: CompileM PartialQuery
   getPartialQuery = do
     gets (.compileStatePartialQuery)
+  putPartialQuery :: PartialQuery -> CompileM ()
   putPartialQuery partialQuery =
     modify' (\cs -> cs {compileStatePartialQuery = partialQuery})
 

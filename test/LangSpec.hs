@@ -31,6 +31,7 @@ import Test.Syd
 import Tests.Utils (models)
 
 import Text.Megaparsec (ParseErrorBundle, errorBundlePretty)
+import Data.Maybe (fromMaybe)
 
 spec :: Spec
 spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
@@ -184,7 +185,7 @@ itMatchesSnapshot name program = describe name $ do
 
     parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
       <- timeout 100_000 (evaluate (parseQuery program))
-        & fmap (maybe (error "timeout parsing") id)
+        & fmap (fromMaybe (error "timeout parsing"))
 
     context "parsed program" $
       parsedProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/1_Parser.golden|]
@@ -214,7 +215,7 @@ itMatchesSnapshot name program = describe name $ do
         & renderSqlBuilder conn
 
     context "raw sql query" $
-      (Text.decodeUtf8 $ PG.fromQuery rawSqlQuery) `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/4_Render.golden|]
+      Text.decodeUtf8 (PG.fromQuery rawSqlQuery) `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/4_Render.golden|]
 
     queryResults <- PG.query_ @SqlRuntimeRow conn rawSqlQuery
     context "query results" $
