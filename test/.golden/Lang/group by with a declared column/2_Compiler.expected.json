@@ -1,0 +1,155 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          "kept",
+          {
+            "contents": [
+              {
+                "tag": "IntType"
+              },
+              {
+                "contents": 7,
+                "tag": "LiteralInt"
+              }
+            ],
+            "tag": "Lit"
+          }
+        ],
+        "tag": "Let"
+      },
+      {
+        "contents": [
+          [],
+          "lost",
+          {
+            "contents": [
+              {
+                "tag": "IntType"
+              },
+              {
+                "contents": 2,
+                "tag": "LiteralInt"
+              }
+            ],
+            "tag": "Lit"
+          }
+        ],
+        "tag": "Let"
+      },
+      {
+        "contents": [
+          [],
+          [
+            [
+              {
+                "contents": {
+                  "contents": [
+                    {
+                      "contents": {
+                        "tag": "IntType"
+                      },
+                      "tag": "KeptByGroupBy"
+                    },
+                    {
+                      "contents": "kept",
+                      "tag": "ColumnWithoutTable"
+                    }
+                  ],
+                  "tag": "ComputedColumn"
+                },
+                "tag": "ExprExt"
+              },
+              null
+            ]
+          ],
+          [
+            {
+              "contents": [
+                [],
+                "new",
+                {
+                  "contents": {
+                    "contents": [
+                      {
+                        "contents": {
+                          "tag": "IntType"
+                        },
+                        "tag": "KeptByGroupBy"
+                      },
+                      {
+                        "contents": "kept",
+                        "tag": "ColumnWithoutTable"
+                      }
+                    ],
+                    "tag": "ComputedColumn"
+                  },
+                  "tag": "ExprExt"
+                }
+              ],
+              "tag": "Let"
+            }
+          ]
+        ],
+        "tag": "GroupBy"
+      },
+      {
+        "contents": [
+          [],
+          [
+            [
+              {
+                "contents": {
+                  "contents": [
+                    {
+                      "contents": {
+                        "tag": "IntType"
+                      },
+                      "tag": "KeptByGroupBy"
+                    },
+                    {
+                      "contents": "new",
+                      "tag": "ColumnWithoutTable"
+                    }
+                  ],
+                  "tag": "ComputedColumn"
+                },
+                "tag": "ExprExt"
+              },
+              null
+            ]
+          ]
+        ],
+        "tag": "OrderBy"
+      },
+      {
+        "contents": [
+          [],
+          [
+            [
+              {
+                "contents": {
+                  "contents": [
+                    {
+                      "tag": "IntType"
+                    },
+                    {
+                      "contents": "kept",
+                      "tag": "ColumnWithoutTable"
+                    }
+                  ],
+                  "tag": "ComputedColumn"
+                },
+                "tag": "ExprExt"
+              },
+              null
+            ]
+          ]
+        ],
+        "tag": "OrderBy"
+      }
+    ]
+  }
+}

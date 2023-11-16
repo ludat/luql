@@ -1,0 +1,43 @@
+{
+  "fromTable": {
+    "contents": [
+      {
+        "fromTable": null,
+        "groupBy": null,
+        "joins": [],
+        "orderBy": [],
+        "selectedColumns": [
+          {
+            "contents": [
+              {
+                "contents": 7,
+                "tag": "LiteralInt"
+              },
+              "a"
+            ],
+            "tag": "SelectNewColumn"
+          }
+        ],
+        "wheres": []
+      },
+      "t"
+    ],
+    "tag": "SubqueryTable"
+  },
+  "groupBy": null,
+  "joins": [],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": [
+        {
+          "contents": "a",
+          "tag": "Ref"
+        },
+        "a"
+      ],
+      "tag": "SelectNewColumn"
+    }
+  ],
+  "wheres": []
+}

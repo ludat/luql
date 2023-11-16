@@ -1,0 +1,81 @@
+{
+  "fromTable": {
+    "contents": {
+      "getTableAlias": "country",
+      "getTableColumns": [
+        [
+          "country",
+          "country.country"
+        ],
+        [
+          "country_id",
+          "country.country_id"
+        ],
+        [
+          "last_update",
+          "country.last_update"
+        ]
+      ],
+      "getTableName": "country"
+    },
+    "tag": "LiteralTable"
+  },
+  "groupBy": null,
+  "joins": [
+    [
+      {
+        "getTableAlias": "city",
+        "getTableColumns": [
+          [
+            "city",
+            "city.city"
+          ],
+          [
+            "city_id",
+            "city.city_id"
+          ],
+          [
+            "country_id",
+            "city.country_id"
+          ],
+          [
+            "last_update",
+            "city.last_update"
+          ]
+        ],
+        "getTableName": "city"
+      },
+      [
+        {
+          "contents": [
+            "InfixNotation",
+            "=",
+            [
+              {
+                "contents": "country.country_id",
+                "tag": "Ref"
+              },
+              {
+                "contents": "city.country_id",
+                "tag": "Ref"
+              }
+            ]
+          ],
+          "tag": "Call"
+        }
+      ]
+    ]
+  ],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": "t",
+      "tag": "SelectFromTable"
+    },
+    {
+      "contents": "city",
+      "tag": "SelectFromTable"
+    }
+  ],
+  "wheres": []
+}

@@ -1,1 +1,0 @@
-SELECT "t"."kept", "kept" AS "new" FROM (SELECT "t".*, 2 AS "lost" FROM (SELECT 7 AS "kept"  ) AS "t") AS "t" GROUP BY "kept" ORDER BY "kept"

@@ -1,0 +1,81 @@
+{
+  "fromTable": {
+    "contents": {
+      "getTableAlias": "l",
+      "getTableColumns": [
+        [
+          "language_id",
+          "l.language_id"
+        ],
+        [
+          "last_update",
+          "l.last_update"
+        ],
+        [
+          "name",
+          "l.name"
+        ]
+      ],
+      "getTableName": "language"
+    },
+    "tag": "LiteralTable"
+  },
+  "groupBy": null,
+  "joins": [
+    [
+      {
+        "getTableAlias": "film",
+        "getTableColumns": [
+          [
+            "description",
+            "film.description"
+          ],
+          [
+            "film_id",
+            "film.film_id"
+          ],
+          [
+            "language_id",
+            "film.language_id"
+          ],
+          [
+            "title",
+            "film.title"
+          ]
+        ],
+        "getTableName": "film"
+      },
+      [
+        {
+          "contents": [
+            "InfixNotation",
+            "=",
+            [
+              {
+                "contents": "l.language_id",
+                "tag": "Ref"
+              },
+              {
+                "contents": "film.language_id",
+                "tag": "Ref"
+              }
+            ]
+          ],
+          "tag": "Call"
+        }
+      ]
+    ]
+  ],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": "t",
+      "tag": "SelectFromTable"
+    },
+    {
+      "contents": "film",
+      "tag": "SelectFromTable"
+    }
+  ],
+  "wheres": []
+}

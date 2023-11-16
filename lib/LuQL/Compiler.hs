@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -12,6 +13,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module LuQL.Compiler where
 
@@ -20,7 +22,12 @@ import Control.Monad.Reader
 import Control.Monad.State.Strict (StateT (..), get, gets, modify', put)
 import Control.Monad.Validate
 
-import Data.Function (on, (&))
+import Data.Aeson (ToJSON (..), ToJSONKey (toJSONKey), ToJSONKeyFunction (ToJSONKeyText),
+                   Value (..))
+import Data.Aeson.Encoding qualified as Aeson.Encoding
+import Data.Aeson.Key qualified as Key
+import Data.Aeson.Types
+import Data.Function ((&))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -29,13 +36,12 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Void (Void)
 
-import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
+import GHC.Generics (Generic)
 
 import LuQL.Parser
 import LuQL.Types
 
 import Safe (headMay)
-import GHC.Generics (Generic)
 
 data Compiled
 
@@ -47,11 +53,7 @@ type instance StmtE "join" "model" Compiled = (Text, ModelDefinition)
 
 type instance StmtE "join" "on" Compiled = (QueryExpression Compiled)
 
-type instance StmtE "ext" "ext" Compiled = CompiledStmtExt
-
-data CompiledStmtExt
-  = StmtCompilationFailed (QueryStatement Raw)
-  deriving (Show, Eq)
+type instance StmtE "ext" "ext" Compiled = Void
 
 type instance ExprE "prop" "ctx" Compiled = Void
 
@@ -74,9 +76,15 @@ type instance ExprE "ext" "ext" Compiled = ExtExprCompiled
 data ExtExprCompiled
   = ExprCompilationFailed (QueryExpression Raw)
   | ComputedColumn (ExprE "computed" "ctx" Compiled) ColumnDefinition
-  | ComputedModel (ExprE "computed" "ctx" Compiled) Text Identifier (Map TableName (ColumnName, ColumnName))
+  | ComputedModel (ExprE "computed" "ctx" Compiled) Text Text (Map TableName (ColumnName, ColumnName))
   | ComputedModelDefinition (ExprE "computed" "ctx" Compiled) ModelDefinition
   | ComputedFunction (ExprE "computed" "ctx" Compiled) FunctionTypeChecker
+  deriving (Generic)
+
+instance ToJSON ExtExprCompiled
+
+instance ToJSON (QueryStatement Compiled)
+instance ToJSON (QueryExpression Compiled)
 
 deriving instance
   ( Show (ExprE "computed" "ctx" Compiled)
@@ -88,31 +96,17 @@ deriving instance
   ) =>
   Eq ExtExprCompiled
 
-instance Show ModelDefinition where
-  show ModelDefinition {..} =
-    [iii| ModelDefinition
-        { tableName = #{show tableName}
-        , defaultSingularName = #{show defaultSingularName}
-        , columns = #{show columns}
-        , relatedTables = #{show relatedTables}
-        , implicitWhere = #{maybe "Nothing" (show . ($ "self")) implicitWhere}
-        }|]
-
-instance Eq ModelDefinition where
-  m1 == m2 =
-    m1.tableName == m2.tableName
-      && m1.defaultSingularName == m2.defaultSingularName
-      && m1.columns == m2.columns
-      && m1.relatedTables == m2.relatedTables
-      && (((==) `on` (fmap ($ "self") . (.implicitWhere))) m1 m2)
+type TableName = Text
+type ColumnName = Text
 
 data ModelDefinition = ModelDefinition
-  { tableName :: TableName,
-    defaultSingularName :: Text,
-    columns :: Map ColumnName RuntimeType,
-    implicitWhere :: Maybe (Text -> QueryExpression Raw),
-    relatedTables :: Map TableName (ColumnName, ColumnName)
-  }
+  { tableName :: TableName
+  , defaultSingularName :: Text
+  , columns :: Map ColumnName RuntimeType
+  , implicitWhere :: Maybe (QueryExpression Raw)
+    -- this expression need the table name to be replaced
+  , relatedTables :: Map TableName (ColumnName, ColumnName)
+  } deriving (Eq, Show, Generic, ToJSON)
 
 instantiateModel :: ModelDefinition -> RuntimeType
 instantiateModel model =
@@ -126,10 +120,12 @@ instantiateModel' model (maybeModelName) =
 
 data Error
   = CompilerError Text Range
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON)
 
 data CompiledQuery = CompiledQuery {unCompiledQuery :: [QueryStatement Compiled]}
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON CompiledQuery
 
 type Models = Map Text ModelDefinition
 
@@ -209,7 +205,7 @@ compileStatement (From srcRange (maybeModelAs, modelExpr)) = do
           }
       emit $ From () (modelName, model)
       case model.implicitWhere of
-        Just implicitWhere -> compileStatement $ Where srcRange $ implicitWhere $ modelName
+        Just implicitWhere -> compileStatement $ Where srcRange $ replaceExpression (Ref nullRange "self") (Ref nullRange modelName) implicitWhere
         Nothing -> pure ()
     _ -> do
       addError srcRange [iii|Invalid model|]
@@ -272,18 +268,18 @@ compileStatement (Join srcRange (maybeModelAs, modelExpr) mayJoinExpr) = do
                 [ Apply
                     srcRange
                     (Ref srcRange "==")
-                    [ Prop srcRange (Ref srcRange modelToJoin) $ fromIdentifier otherColumn,
-                      Prop srcRange (Ref srcRange otherModelName) $ fromIdentifier myColumn
+                    [ Prop srcRange (Ref srcRange modelToJoin) otherColumn,
+                      Prop srcRange (Ref srcRange otherModelName) myColumn
                     ],
-                  where_ otherModelName
+                  replaceExpression (Ref nullRange "self") (Ref nullRange otherModelName) where_
                 ]
           Nothing ->
             compileExpression $
               Apply
                 srcRange
                 (Ref srcRange "==")
-                [ Prop srcRange (Ref srcRange modelToJoin) $ fromIdentifier otherColumn,
-                  Prop srcRange (Ref srcRange otherModelName) $ fromIdentifier myColumn
+                [ Prop srcRange (Ref srcRange modelToJoin) otherColumn,
+                  Prop srcRange (Ref srcRange otherModelName) myColumn
                 ]
 
   emit $ Join () (otherModelName, newModelToJoin) joinExpression
@@ -328,10 +324,9 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
             let relevantColumns =
                   compiledColumns
                   & mapMaybe (\case
-                    (ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just t) n))), _) | t == modelName -> Just n
+                    (ExprExt (ComputedColumn _ (ColumnWithTable t n)), _) | t == modelName -> Just n
                     _ -> Nothing
                     )
-                  & fmap Identifier
             pure $ acc ++
               [ (name, ExprExt (ComputedModel
                   (ModelType (propsMap & Map.mapMaybeWithKey (\k v ->
@@ -352,7 +347,7 @@ compileStatement (GroupBy _ groupByColumns letStatements) = do
             let relevantColumns =
                   compiledColumns
                   & mapMaybe (\case
-                    (ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier Nothing n))), _) -> Just n
+                    (ExprExt (ComputedColumn _ (ColumnWithoutTable n)), _) -> Just n
                     _ -> Nothing
                     )
             in case (tagOrDiscard, t) of
@@ -385,7 +380,7 @@ compileStatement (Let _srcRange name expression) = do
       { variablesInScope =
           ti.variablesInScope
             ++ [ ( name,
-                   ExprExt $ ComputedColumn (getType e) (ColumnDefinition $ QualifiedIdentifier Nothing name)
+                   ExprExt $ ComputedColumn (getType e) (ColumnWithoutTable name)
                  )
                ]
       }
@@ -402,7 +397,7 @@ compileStatement (OrderBy _ exprs) = do
 compileStatement (StmtExt (ExtStmtInvalid srcRange t)) = do
   addCatastrophicError [iii|Invalid statement: #{t}|] srcRange
 compileStatement (StmtExt (ExtStmtEmptyLine srcRange)) = do
-  completeWith srcRange $ \complPos -> do
+  completeWith srcRange $ \_complPos -> do
     pure
       [ Completion "from" srcRange.begin
       , Completion "where" srcRange.begin
@@ -410,6 +405,28 @@ compileStatement (StmtExt (ExtStmtEmptyLine srcRange)) = do
       , Completion "order by" srcRange.begin
       , Completion "let" srcRange.begin
       ]
+
+replaceExpression :: QueryExpression Raw -> QueryExpression Raw -> QueryExpression Raw -> QueryExpression Raw
+replaceExpression oldExpression newExpression expressionToReplace =
+  if oldExpression == expressionToReplace
+    then newExpression
+    else case expressionToReplace of
+      Apply ctx func params ->
+        Apply ctx (go func) $ fmap go params
+      If ctx condExpr thenExpr elseExpr ->
+        If ctx (go condExpr) (go thenExpr) (go elseExpr)
+      RawSql ctx exprs ->
+        RawSql ctx (exprs & fmap (fmap go))
+      Prop ctx expr name ->
+        Prop ctx (go expr) name
+      ExprExt (ExtExprEmptyExpr ctx)->
+        ExprExt (ExtExprEmptyExpr ctx)
+      Ref ctx name ->
+        Ref ctx name
+      Lit ctx value ->
+        Lit ctx value
+  where
+    go = replaceExpression oldExpression newExpression
 
 data TagOrDiscard = Tag | Discard
   deriving (Show, Eq)
@@ -430,9 +447,10 @@ class (Monad m) => HasTypeInfo m where
   getTypeInfo :: m TypeInfo
   putTypeInfo :: TypeInfo -> m ()
 
-data ColumnDefinition = ColumnDefinition
-  { column :: QualifiedIdentifier
-  } deriving (Show, Eq)
+data ColumnDefinition
+  = ColumnWithTable Text Text
+  | ColumnWithoutTable Text
+   deriving (Show, Eq, Generic, ToJSON)
 
 data RuntimeFunction = RuntimeFunction
   { rFuncNotation :: FunctionNotation,
@@ -456,11 +474,11 @@ data RuntimeType
   | BooleanType
   | DateType
   | NullType
-  | ModelType (Map Identifier RuntimeType)
+  | ModelType (Map Text RuntimeType)
   | ModelDefinitionType
   | FunctionType FunctionTypeChecker
   | KeptByGroupBy RuntimeType
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON)
 
 newtype FunctionTypeChecker
   = FunctionTypeChecker
@@ -468,6 +486,9 @@ newtype FunctionTypeChecker
         [QueryExpression Raw] ->
         CompilerM ([QueryExpression Compiled], RuntimeType, (Text, [RuntimeType]))
       )
+
+instance ToJSON FunctionTypeChecker where
+  toJSON _ = String "function"
 
 instance Show FunctionTypeChecker where
   show _ = "function"
@@ -477,8 +498,7 @@ instance Eq FunctionTypeChecker where
 
 data TypeInfo = TypeInfo
   { variablesInScope :: [(Text, QueryExpression Compiled)]
-  }
-  deriving (Show)
+  } deriving (Show)
 
 type TypeCheckM =
   StateT TypeInfo Identity
@@ -506,11 +526,6 @@ lit t = t
 malo :: RuntimeType
 malo = UnknownType
 
--- TODO esto esta repetido en SqlGeneration.hs
-qualifyIdentifier :: Identifier -> Identifier -> QualifiedIdentifier
-qualifyIdentifier table column =
-  QualifiedIdentifier (Just $ fromIdentifier table) (fromIdentifier column)
-
 compileExpression :: QueryExpression Raw -> CompilerM (QueryExpression Compiled)
 compileExpression (Lit _ (LiteralString t)) = pure $ Lit (lit StringType) $ LiteralString t
 compileExpression (Lit _ (LiteralInt n)) = pure $ Lit (lit IntType) $ LiteralInt n
@@ -520,21 +535,21 @@ compileExpression (Lit _ (LiteralNull)) = pure $ Lit (lit NullType) LiteralNull
 compileExpression expression@(Prop srcRange expr propName) = do
   tExpr <- compileExpression expr
   case tExpr of
-    (ExprExt (ComputedModel (ModelType m) n _ _)) -> case Map.lookup (Identifier propName) m of
+    (ExprExt (ComputedModel (ModelType m) n _ _)) -> case Map.lookup propName m of
       Nothing -> do
         addError srcRange [iii|#{expr} no tiene una propiedad: #{propName}|]
         completeWith srcRange $ \completionPosition -> do
           let stringUntilComplPos = propName & T.take (completionPosition - srcRange.begin)
           m
             & Map.toList
-            & filter (\(Identifier prop, _) -> T.isPrefixOf stringUntilComplPos prop)
-            & fmap (\(Identifier prop, _) -> Completion { newText = prop, from = srcRange.begin + 1 })
+            & filter (\(prop, _) -> T.isPrefixOf stringUntilComplPos prop)
+            & fmap (\(prop, _) -> Completion { newText = prop, from = srcRange.begin + 1 })
             & pure
         pure $ ExprExt $ ExprCompilationFailed expression
       Just ty -> do
         pure $
           ExprExt $
-            ComputedColumn ty (ColumnDefinition $ qualifyIdentifier (Identifier n) $ Identifier propName)
+            ComputedColumn ty (ColumnWithTable n propName)
     (ExprExt (ComputedModelDefinition _ _)) ->
       pure $ RawSql AnyType [Left "select centros.id from centro_de_costos centros left join centro_de_costos subcentros on centros.sub_centro_de_id=subcentros.id where centros.id= 227 or (centros.sub_centro_de_id = 227) or (subcentros.sub_centro_de_id = 227)"]
     -- -- TODO podria definirle propiedades a cosas que no sean tablas :thinking:
@@ -907,7 +922,7 @@ nativeFunctions =
 data FunctionNotation
   = InfixNotation
   | DefaultNotation
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON)
 
 resolveName :: Range -> Text -> CompilerM (QueryExpression Compiled)
 resolveName srcRange name = do

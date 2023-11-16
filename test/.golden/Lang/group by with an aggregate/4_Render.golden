@@ -1,1 +1,0 @@
-SELECT "t"."city.country_id", max("city.country_id") AS "max_city" FROM (SELECT "city"."city" AS "city.city", "city"."city_id" AS "city.city_id", "city"."country_id" AS "city.country_id", "city"."last_update" AS "city.last_update" FROM "city") AS "t" GROUP BY "city.country_id"

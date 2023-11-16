@@ -1,0 +1,33 @@
+{
+  "fromTable": {
+    "contents": {
+      "getTableAlias": "l",
+      "getTableColumns": [
+        [
+          "language_id",
+          "l.language_id"
+        ],
+        [
+          "last_update",
+          "l.last_update"
+        ],
+        [
+          "name",
+          "l.name"
+        ]
+      ],
+      "getTableName": "language"
+    },
+    "tag": "LiteralTable"
+  },
+  "groupBy": null,
+  "joins": [],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": "t",
+      "tag": "SelectFromTable"
+    }
+  ],
+  "wheres": []
+}

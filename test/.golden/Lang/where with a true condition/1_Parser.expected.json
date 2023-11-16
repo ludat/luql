@@ -1,0 +1,46 @@
+[
+  {
+    "contents": [
+      {
+        "begin": 0,
+        "end": 14
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 5,
+              "end": 14
+            },
+            "Languages"
+          ],
+          "tag": "Ref"
+        }
+      ]
+    ],
+    "tag": "From"
+  },
+  {
+    "contents": [
+      {
+        "begin": 15,
+        "end": 25
+      },
+      {
+        "contents": [
+          {
+            "begin": 21,
+            "end": 25
+          },
+          {
+            "contents": true,
+            "tag": "LiteralBoolean"
+          }
+        ],
+        "tag": "Lit"
+      }
+    ],
+    "tag": "Where"
+  }
+]

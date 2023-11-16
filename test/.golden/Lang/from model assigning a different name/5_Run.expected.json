@@ -1,0 +1,86 @@
+[
+  {
+    "l.language_id": {
+      "contents": 1,
+      "tag": "SqlInt"
+    },
+    "l.last_update": {
+      "contents": "2022-02-15T10:02:19Z",
+      "tag": "SqlTimestampWithTimezone"
+    },
+    "l.name": {
+      "contents": "English",
+      "tag": "SqlText"
+    }
+  },
+  {
+    "l.language_id": {
+      "contents": 2,
+      "tag": "SqlInt"
+    },
+    "l.last_update": {
+      "contents": "2022-02-15T10:02:19Z",
+      "tag": "SqlTimestampWithTimezone"
+    },
+    "l.name": {
+      "contents": "Italian",
+      "tag": "SqlText"
+    }
+  },
+  {
+    "l.language_id": {
+      "contents": 3,
+      "tag": "SqlInt"
+    },
+    "l.last_update": {
+      "contents": "2022-02-15T10:02:19Z",
+      "tag": "SqlTimestampWithTimezone"
+    },
+    "l.name": {
+      "contents": "Japanese",
+      "tag": "SqlText"
+    }
+  },
+  {
+    "l.language_id": {
+      "contents": 4,
+      "tag": "SqlInt"
+    },
+    "l.last_update": {
+      "contents": "2022-02-15T10:02:19Z",
+      "tag": "SqlTimestampWithTimezone"
+    },
+    "l.name": {
+      "contents": "Mandarin",
+      "tag": "SqlText"
+    }
+  },
+  {
+    "l.language_id": {
+      "contents": 5,
+      "tag": "SqlInt"
+    },
+    "l.last_update": {
+      "contents": "2022-02-15T10:02:19Z",
+      "tag": "SqlTimestampWithTimezone"
+    },
+    "l.name": {
+      "contents": "French",
+      "tag": "SqlText"
+    }
+  },
+  {
+    "l.language_id": {
+      "contents": 6,
+      "tag": "SqlInt"
+    },
+    "l.last_update": {
+      "contents": "2022-02-15T10:02:19Z",
+      "tag": "SqlTimestampWithTimezone"
+    },
+    "l.name": {
+      "contents": "German",
+      "tag": "SqlText"
+    }
+  }
+]

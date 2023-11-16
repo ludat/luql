@@ -1,0 +1,58 @@
+{
+  "fromTable": {
+    "contents": {
+      "getTableAlias": "city",
+      "getTableColumns": [
+        [
+          "city",
+          "city.city"
+        ],
+        [
+          "city_id",
+          "city.city_id"
+        ],
+        [
+          "country_id",
+          "city.country_id"
+        ],
+        [
+          "last_update",
+          "city.last_update"
+        ]
+      ],
+      "getTableName": "city"
+    },
+    "tag": "LiteralTable"
+  },
+  "groupBy": {
+    "byColumns": [
+      {
+        "contents": "city.country_id",
+        "tag": "Ref"
+      }
+    ]
+  },
+  "joins": [],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": "city.country_id",
+      "tag": "SelectColumnFromTable"
+    },
+    {
+      "contents": [
+        {
+          "contents": [
+            {
+              "Left": "count(*)"
+            }
+          ],
+          "tag": "RawSql"
+        },
+        "count"
+      ],
+      "tag": "SelectNewColumn"
+    }
+  ],
+  "wheres": []
+}

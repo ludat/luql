@@ -1,0 +1,47 @@
+[
+  {
+    "contents": [
+      {
+        "begin": 0,
+        "end": 14
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 5,
+              "end": 14
+            },
+            "Countries"
+          ],
+          "tag": "Ref"
+        }
+      ]
+    ],
+    "tag": "From"
+  },
+  {
+    "contents": [
+      {
+        "begin": 15,
+        "end": 26
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 20,
+              "end": 26
+            },
+            "Cities"
+          ],
+          "tag": "Ref"
+        }
+      ],
+      null
+    ],
+    "tag": "Join"
+  }
+]

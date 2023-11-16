@@ -1,0 +1,90 @@
+{
+  "fromTable": {
+    "contents": [
+      {
+        "fromTable": {
+          "contents": [
+            {
+              "fromTable": null,
+              "groupBy": null,
+              "joins": [],
+              "orderBy": [],
+              "selectedColumns": [
+                {
+                  "contents": [
+                    {
+                      "contents": 7,
+                      "tag": "LiteralInt"
+                    },
+                    "kept"
+                  ],
+                  "tag": "SelectNewColumn"
+                }
+              ],
+              "wheres": []
+            },
+            "t"
+          ],
+          "tag": "SubqueryTable"
+        },
+        "groupBy": null,
+        "joins": [],
+        "orderBy": [],
+        "selectedColumns": [
+          {
+            "contents": "t",
+            "tag": "SelectFromTable"
+          },
+          {
+            "contents": [
+              {
+                "contents": 2,
+                "tag": "LiteralInt"
+              },
+              "lost"
+            ],
+            "tag": "SelectNewColumn"
+          }
+        ],
+        "wheres": []
+      },
+      "t"
+    ],
+    "tag": "SubqueryTable"
+  },
+  "groupBy": {
+    "byColumns": [
+      {
+        "contents": "kept",
+        "tag": "Ref"
+      }
+    ]
+  },
+  "joins": [],
+  "orderBy": [
+    [
+      {
+        "contents": "kept",
+        "tag": "Ref"
+      },
+      null
+    ]
+  ],
+  "selectedColumns": [
+    {
+      "contents": "kept",
+      "tag": "SelectColumnFromTable"
+    },
+    {
+      "contents": [
+        {
+          "contents": "kept",
+          "tag": "Ref"
+        },
+        "new"
+      ],
+      "tag": "SelectNewColumn"
+    }
+  ],
+  "wheres": []
+}

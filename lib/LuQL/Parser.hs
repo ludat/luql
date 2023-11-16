@@ -9,6 +9,7 @@ module LuQL.Parser where
 import Control.Monad (void)
 import Control.Monad.Combinators.Expr
 
+import Data.Aeson
 import Data.Char (isAlphaNum)
 import Data.Function ((&))
 import Data.Text (Text)
@@ -25,7 +26,10 @@ import Text.Megaparsec.Char.Lexer qualified as L
 type Parser = Parsec Void Text
 
 newtype RawQuery = RawQuery {unRawQuery :: [QueryStatement Raw]}
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show, ToJSON)
+
+instance ToJSON (QueryStatement Raw)
+instance ToJSON (QueryExpression Raw)
 
 data Raw
 
@@ -44,6 +48,8 @@ data ExtStmtRaw
   | ExtStmtEmptyLine (StmtE "invalid" "ctx" Raw)
   deriving (Show, Generic, Eq)
 
+instance ToJSON ExtStmtRaw
+
 type instance ExprE _ "ctx" Raw = Range
 
 type instance ExprE "apply" "function" Raw = (QueryExpression Raw)
@@ -53,6 +59,8 @@ type instance ExprE "ext" "ext" Raw = ExtExprRaw
 data ExtExprRaw
   = ExtExprEmptyExpr (ExprE "empty" "ctx" Raw)
   deriving (Show, Generic, Eq)
+
+instance ToJSON ExtExprRaw
 
 spaceConsumer :: Parser ()
 spaceConsumer =
@@ -74,7 +82,7 @@ lexeme = L.lexeme spaceConsumer
 symbol :: Text -> Parser Text
 symbol = L.symbol' spaceConsumer
 
-identifierParser :: Parser ModelName
+identifierParser :: Parser Text
 identifierParser = lexeme $ takeWhile1P Nothing (\c -> isAlphaNum c || c == '_')
 
 fromParser :: Parser (QueryStatement Raw)
@@ -94,6 +102,8 @@ data Range = Range
   { begin :: Position
   , end :: Position
   } deriving (Eq, Generic, Show)
+
+instance ToJSON Range
 
 nullRange :: Range
 nullRange = Range -1 -1

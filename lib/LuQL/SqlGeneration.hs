@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -13,6 +15,7 @@ import Control.Monad.Identity (Identity (runIdentity))
 import Control.Monad.Reader
 import Control.Monad.State.Strict (StateT (runStateT), gets, modify')
 
+import Data.Aeson (ToJSON (..))
 import Data.Bifunctor qualified
 import Data.Function ((&))
 import Data.Map qualified as Map
@@ -20,7 +23,7 @@ import Data.Maybe (isJust, mapMaybe)
 import Data.String.Interpolate (__i, i, iii)
 import Data.Text (Text)
 
-import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
+import GHC.Generics
 
 import LuQL.Compiler hiding (compileExpression, compileStatement)
 import LuQL.Compiler qualified as T
@@ -32,10 +35,14 @@ data SqlExpression
   | LiteralFloat Float
   | LiteralBoolean Bool
   | LiteralNull
-  | Ref Identifier
+  | Ref SqlIdentifier
   | Call FunctionNotation Text [SqlExpression]
   | RawSql [Either Text SqlExpression]
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON)
+
+newtype SqlIdentifier = SqlIdentifier { asText :: Text }
+  deriving (Eq, Show, Generic)
+  deriving newtype (ToJSON)
 
 data PartialQuery = PartialQuery
   { fromTable :: Maybe PartialFromTable
@@ -45,28 +52,29 @@ data PartialQuery = PartialQuery
   , groupBy :: Maybe GroupByDefinition
   , orderBy :: [(SqlExpression, Maybe T.OrderDirection)]
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON)
 
 data PartialFromTable
-  = SubqueryTable PartialQuery Identifier
+  = SubqueryTable PartialQuery SqlIdentifier
   | LiteralTable Table
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic, ToJSON)
 
 data SelectedColumn
-  = SelectNewColumn SqlExpression T.ColumnName
-  | SelectColumnFromTable QualifiedIdentifier
-  | SelectFromTable T.TableName
-  deriving (Eq, Show)
+  = SelectNewColumn SqlExpression SqlIdentifier
+  | SelectColumnFromTable SqlIdentifier
+  | SelectFromTable SqlIdentifier
+  deriving (Eq, Show, Generic, ToJSON)
 
 data Table = FromTable
-  { getTableName :: T.TableName
-  , getTableAlias :: T.TableName
-  , getTableColumns :: [T.ColumnName]
-  }
-  deriving (Eq, Show)
+  { getTableName :: SqlIdentifier
+  , getTableAlias :: SqlIdentifier
+  , getTableColumns :: [(SqlIdentifier, SqlIdentifier)]
+  } deriving (Eq, Show, Generic, ToJSON)
 
-newtype GroupByDefinition = GroupByDefinition {byColumns :: [SqlExpression]}
-  deriving (Eq, Show)
+newtype GroupByDefinition = GroupByDefinition
+  { byColumns :: [SqlExpression]
+  } deriving (Eq, Show, Generic)
+    deriving anyclass (ToJSON)
 
 class HasPartialQuery m where
   getPartialQuery :: m PartialQuery
@@ -99,11 +107,13 @@ compileStatement q@(T.From _ (modelName, model)) = do
             Just $
               LiteralTable $
                 FromTable
-                  (model.tableName)
-                  (Identifier modelName)
-                  (Map.keys model.columns),
+                  (SqlIdentifier model.tableName)
+                  (SqlIdentifier modelName)
+                  (Map.keys model.columns
+                  & fmap (\n -> (SqlIdentifier n, compileNameForTableColumn modelName n))
+                  ),
           selectedColumns =
-            query.selectedColumns ++ [SelectFromTable "t"],
+            query.selectedColumns ++ [SelectFromTable $ SqlIdentifier "t"],
           wheres = []
         }
 compileStatement q@(T.Where _ expression) = do
@@ -114,17 +124,22 @@ compileStatement q@(T.Where _ expression) = do
       query
         { wheres = query.wheres ++ [newWhere]
         }
-compileStatement q@(T.Join _ (modelName, model) (expr)) = do
+compileStatement q@(T.Join _ (modelName, model) expr) = do
   addNewSubqueryIfNecessary q
   let compExpr = compileExpression expr
 
   modifyPartialQuery $
     \query ->
       query
-        { selectedColumns = query.selectedColumns ++ [SelectFromTable $ Identifier modelName],
+        { selectedColumns = query.selectedColumns ++ [SelectFromTable $ SqlIdentifier modelName],
           joins =
             query.joins
-              ++ [ ( FromTable (model.tableName) (Identifier modelName) (Map.keys model.columns),
+              ++ [ ( FromTable
+                       (SqlIdentifier model.tableName)
+                       (SqlIdentifier modelName)
+                       (Map.keys model.columns
+                       & fmap (\n -> (SqlIdentifier n, compileNameForTableColumn modelName n))
+                       ),
                      [compExpr]
                    )
                  ]
@@ -140,23 +155,23 @@ compileStatement query@(T.GroupBy _ groupByExpressions lets) = do
     partialQuery
       { selectedColumns =
           (mapMaybe (groupBy2SelectColumn) (newByColumns))
-            ++ fmap (\(nombre, expr) -> SelectNewColumn expr nombre) compiledLets,
+            ++ fmap (\(nombre, expr) -> SelectNewColumn expr $ SqlIdentifier nombre) compiledLets,
         groupBy = Just $ GroupByDefinition $ fmap fst newByColumns
       }
   where
     groupBy2SelectColumn :: (SqlExpression, Maybe Text) -> Maybe SelectedColumn
-    groupBy2SelectColumn (Ref name, Nothing) = Just $ SelectColumnFromTable $ qualifyIdentifier "t" name
-    groupBy2SelectColumn (expr, Just name) = Just $ SelectNewColumn expr (Identifier name)
+    groupBy2SelectColumn (Ref name, Nothing) = Just $ SelectColumnFromTable name
+    groupBy2SelectColumn (expr, Just name) = Just $ SelectNewColumn expr $ SqlIdentifier name
     groupBy2SelectColumn (_expr, _name) = Nothing
 
     extractGroupByBody :: T.QueryStatement a -> (T.ColumnName, T.QueryExpression a)
-    extractGroupByBody (T.Let _ letName value) = (Identifier letName, value)
+    extractGroupByBody (T.Let _ letName value) = (letName, value)
     extractGroupByBody _qe = error [iii|no vale poner algo que no sea let en groupby|]
 compileStatement q@(T.Let _ti name expr) = do
   addNewSubqueryIfNecessary q
   modifyPartialQuery $ \query ->
     query
-      { selectedColumns = query.selectedColumns ++ [SelectNewColumn (compileExpression expr) $ Identifier name]
+      { selectedColumns = query.selectedColumns ++ [SelectNewColumn (compileExpression expr) $ SqlIdentifier name]
       }
 compileStatement q@(T.OrderBy _ exprs) = do
   addNewSubqueryIfNecessary q
@@ -175,18 +190,15 @@ compileStatement s@(T.Return () expressions) = do
         { selectedColumns =
             expressions
             & mapMaybe (\case
-                (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just table) name)))) ->
-                  Just $ SelectNewColumn (Ref $ compileNameForTableColumn (Identifier table) (Identifier name)) (compileNameForTableColumn (Identifier table) (Identifier name))
-                (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier Nothing name)))) ->
-                  Just $ SelectNewColumn (Ref $ Identifier name) (Identifier name)
+                (T.ExprExt (ComputedColumn _ (ColumnWithTable table name))) ->
+                  Just $ SelectNewColumn (Ref $ compileNameForTableColumn table name) (compileNameForTableColumn table name)
+                (T.ExprExt (ComputedColumn _ (ColumnWithoutTable name))) ->
+                  Just $ SelectNewColumn (Ref $ SqlIdentifier name) (SqlIdentifier name)
               )
         }
-compileStatement s@(T.StmtExt (T.StmtCompilationFailed _)) = do
-  error [iii|compileStatement #{s}|]
-
-compileNameForTableColumn :: Identifier -> Identifier -> Identifier
+compileNameForTableColumn :: Text -> Text -> SqlIdentifier
 compileNameForTableColumn tableName columnName =
-  Identifier (fromIdentifier tableName <> "." <> fromIdentifier columnName)
+  SqlIdentifier (tableName <> "." <> columnName)
 
 addNewSubqueryIfNecessary :: (Monad m, HasPartialQuery m) => T.QueryStatement Compiled -> m ()
 addNewSubqueryIfNecessary q = do
@@ -194,8 +206,8 @@ addNewSubqueryIfNecessary q = do
   when (isNewSubqueryIfNecessary q pq) $
     modifyPartialQuery $ \partialQuery ->
       PartialQuery
-        { fromTable = Just $ SubqueryTable partialQuery (Identifier "t"),
-          selectedColumns = [SelectFromTable "t"],
+        { fromTable = Just $ SubqueryTable partialQuery (SqlIdentifier "t"),
+          selectedColumns = [SelectFromTable $ SqlIdentifier "t"],
           wheres = [],
           joins = [],
           groupBy = Nothing,
@@ -214,7 +226,6 @@ isNewSubqueryIfNecessary expr pq =
     (T.Return _ _) -> thereAreOtherLets
     (T.GroupBy _ _ _) -> thereIsAGroupBy || thereAreOtherLets || thereIsAJoin
     (T.OrderBy _ _) -> False
-    (T.StmtExt (T.StmtCompilationFailed _)) -> undefined
   where
     thereIsAGroupBy =
       pq.groupBy
@@ -305,10 +316,10 @@ compileExpression (T.If _ condExpr thenExpr elseExpr) =
   END
     |]
         ]
-compileExpression (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Just table) name)))) =
-  Ref $ compileNameForTableColumn (Identifier table) (Identifier name)
-compileExpression (T.ExprExt (ComputedColumn _ (ColumnDefinition (QualifiedIdentifier (Nothing) name)))) =
-  Ref $ Identifier name
+compileExpression (T.ExprExt (ComputedColumn _ (ColumnWithTable table name))) =
+  Ref $ compileNameForTableColumn table name
+compileExpression (T.ExprExt (ComputedColumn _ (ColumnWithoutTable name))) =
+  Ref $ SqlIdentifier name
 compileExpression (T.ExprExt (ComputedModel _ _ _ _)) =
   error "falle"
 compileExpression (T.ExprExt (ComputedModelDefinition _ _)) =

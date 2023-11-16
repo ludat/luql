@@ -1,0 +1,79 @@
+{
+  "fromTable": {
+    "contents": {
+      "getTableAlias": "customer",
+      "getTableColumns": [
+        [
+          "active",
+          "customer.active"
+        ],
+        [
+          "activebool",
+          "customer.activebool"
+        ],
+        [
+          "address_id",
+          "customer.address_id"
+        ],
+        [
+          "create_date",
+          "customer.create_date"
+        ],
+        [
+          "customer_id",
+          "customer.customer_id"
+        ],
+        [
+          "email",
+          "customer.email"
+        ],
+        [
+          "first_name",
+          "customer.first_name"
+        ],
+        [
+          "last_name",
+          "customer.last_name"
+        ],
+        [
+          "last_update",
+          "customer.last_update"
+        ],
+        [
+          "store_id",
+          "customer.store_id"
+        ]
+      ],
+      "getTableName": "customer"
+    },
+    "tag": "LiteralTable"
+  },
+  "groupBy": null,
+  "joins": [],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": "t",
+      "tag": "SelectFromTable"
+    }
+  ],
+  "wheres": [
+    {
+      "contents": [
+        "InfixNotation",
+        "=",
+        [
+          {
+            "contents": "customer.active",
+            "tag": "Ref"
+          },
+          {
+            "contents": 1,
+            "tag": "LiteralInt"
+          }
+        ]
+      ],
+      "tag": "Call"
+    }
+  ]
+}

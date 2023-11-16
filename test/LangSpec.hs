@@ -3,19 +3,20 @@ module LangSpec
     ) where
 
 import Control.Exception (bracket, evaluate)
+import Control.Monad (unless, when)
 
+import Data.Aeson
+import Data.Aeson.Encode.Pretty (Config (..), Indent (..), defConfig, encodePretty')
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Function ((&))
+import Data.Maybe (fromMaybe)
 import Data.String.Interpolate
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
-import Data.Text.IO qualified as Text
-import Data.Void (Void)
 
 import Database.PostgreSQL.Simple qualified as PG
 import Database.PostgreSQL.Simple.Types qualified as PG
-
-import GHC.Stack (HasCallStack)
 
 import LuQL.Compiler
 import LuQL.Parser
@@ -24,17 +25,17 @@ import LuQL.Runner (SqlRuntimeRow (..))
 import LuQL.SqlGeneration qualified
 
 import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.FilePath (splitExtensions)
 import System.Timeout
 
-import Test.Syd
+import Test.Hspec
 
 import Tests.Utils (models)
 
-import Text.Megaparsec (ParseErrorBundle, errorBundlePretty)
-import Data.Maybe (fromMaybe)
+import Text.Megaparsec (errorBundlePretty)
 
 spec :: Spec
-spec =  aroundAll withDatabase $ doNotRandomiseExecutionOrder $ do
+spec =  aroundAll withDatabase $ do
   itMatchesSnapshot "from model"
     [__i|
       from Languages
@@ -161,63 +162,76 @@ withDatabase action = bracket
   PG.close
   action
 
-shouldMatchSnapshot :: (HasCallStack, Show a) => a -> String -> IO ()
+shouldMatchSnapshot :: (HasCallStack, ToJSON a) => a -> String -> IO ()
 shouldMatchSnapshot actualToShow filepath = do
-  let actual = actualToShow & ppShow & Text.pack
-  shouldMatchSnapshot' actual filepath
+  let actual = actualToShow & encodeToJSON
+  shouldMatchSnapshot' [i|#{actual}|] filepath
 
-shouldMatchSnapshot' :: HasCallStack => Text -> String -> IO ()
+addExtension :: String -> FilePath -> FilePath
+addExtension newExtension filepath =
+  let
+    (filepathWithoutExtensions, originalExtensions) = splitExtensions filepath
+    newExtensions = newExtension <> originalExtensions
+  in filepathWithoutExtensions <> newExtensions
+
+shouldMatchSnapshot' :: HasCallStack => ByteString -> FilePath -> IO ()
 shouldMatchSnapshot' actual filepath = do
-  targetPathExists <- doesFileExist filepath
-  if not targetPathExists
-    then Text.writeFile filepath actual
-    else do
-      expectedText <- Text.readFile filepath
-      Text.writeFile filepath actual
-      actual `shouldBe` expectedText
+  let expectedFilepath = addExtension ".expected" filepath
+  let actualFilepath = addExtension ".actual" filepath
+  expectedFilepathExists <- doesFileExist expectedFilepath
+  unless expectedFilepathExists $ do
+    BS.writeFile actualFilepath actual
+    fail [__i|expected result file not present: #{expectedFilepath}, actual result is written to #{actualFilepath}|]
 
-itMatchesSnapshot :: HasCallStack => String -> Text -> TestDefM '[PG.Connection] () ()
+  expectedText <- BS.readFile expectedFilepath
+
+  when (actual /= expectedText) $ do
+    BS.writeFile actualFilepath actual
+    fail [i|expected and actual are not equal: diff #{expectedFilepath} #{actualFilepath}"|]
+
+itMatchesSnapshot :: HasCallStack => String -> Text -> SpecWith PG.Connection
 itMatchesSnapshot name program = describe name $ do
-  itWithOuter "matches the snapshots" $ \conn -> do
+  it "matches the snapshots" $ \conn -> do
     createDirectoryIfMissing True ("test/.golden/Lang/" <> name)
-    context "original program" $
-      program `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/0_Raw.golden|]
+    Text.encodeUtf8 program `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/0_Raw.luql|]
 
-    parsedProgram :: Either (ParseErrorBundle Text Void) RawQuery
+    parsedProgram :: RawQuery
       <- timeout 100_000 (evaluate (parseQuery program))
         & fmap (fromMaybe (error "timeout parsing"))
+        & fmap (either (error . errorBundlePretty) id)
 
-    context "parsed program" $
-      parsedProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/1_Parser.golden|]
+    encodeToJSON parsedProgram `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/1_Parser.json|]
 
     let compiledProgram :: Either [Error] CompiledQuery
         compiledProgram =
           parsedProgram
-            & either (error . errorBundlePretty) id
             & compileProgram models
 
-    context "compiled program" $
-      compiledProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/2_Compiler.golden|]
+    compiledProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/2_Compiler.json|]
 
     let partialSqlQuery :: LuQL.SqlGeneration.PartialQuery
         partialSqlQuery =
           compiledProgram
-            & either (error . ppShow) id
+            & either (\e -> error [i|#{e}|]) id
             & (.unCompiledQuery)
             & LuQL.SqlGeneration.compileStatements
 
-    context "sql query in haskell" $
-      partialSqlQuery `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/3_SqlGeneration.golden|]
+    partialSqlQuery `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/3_SqlGeneration.json|]
 
     rawSqlQuery <-
       partialSqlQuery
         & renderPartialQuery
         & renderSqlBuilder conn
 
-    context "raw sql query" $
-      Text.decodeUtf8 (PG.fromQuery rawSqlQuery) `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/4_Render.golden|]
+    PG.fromQuery rawSqlQuery `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/4_Render.sql|]
 
     queryResults <- PG.query_ @SqlRuntimeRow conn rawSqlQuery
-    context "query results" $
-      queryResults `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/5_Run.golden|]
+    queryResults `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/5_Run.json|]
+
+encodeToJSON :: ToJSON a => a -> ByteString
+encodeToJSON = BS.toStrict . encodePretty'
+  defConfig
+  { confIndent = Spaces 2
+  , confTrailingNewline = True
+  }
 

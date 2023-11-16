@@ -1,0 +1,48 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          "a",
+          {
+            "contents": [
+              {
+                "tag": "IntType"
+              },
+              {
+                "contents": 7,
+                "tag": "LiteralInt"
+              }
+            ],
+            "tag": "Lit"
+          }
+        ],
+        "tag": "Let"
+      },
+      {
+        "contents": [
+          [],
+          [
+            {
+              "contents": {
+                "contents": [
+                  {
+                    "tag": "IntType"
+                  },
+                  {
+                    "contents": "a",
+                    "tag": "ColumnWithoutTable"
+                  }
+                ],
+                "tag": "ComputedColumn"
+              },
+              "tag": "ExprExt"
+            }
+          ]
+        ],
+        "tag": "Return"
+      }
+    ]
+  }
+}

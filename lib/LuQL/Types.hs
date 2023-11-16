@@ -10,21 +10,14 @@
 
 module LuQL.Types where
 
+import Data.Aeson
 import Data.Kind (Constraint, Type)
 import Data.Text (Text)
-
-import Database.PostgreSQL.Simple.Types (Identifier)
 
 import GHC.Generics (Generic)
 import GHC.TypeLits
 
-type ModelName = Text
-
 type family StmtE (field :: Symbol) (purpose :: Symbol) type_
-
-type TableName = Identifier
-
-type ColumnName = Identifier
 
 data QueryStatement stype
   = From (StmtE "from" "ctx" stype) (StmtE "from" "model" stype)
@@ -40,7 +33,9 @@ data QueryStatement stype
 data OrderDirection
   = Asc
   | Desc
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON OrderDirection
 
 type ForAllStmt (c :: Type -> Constraint) stype =
   ( c (StmtE "from" "ctx" stype),
@@ -79,7 +74,9 @@ data LiteralValue
   | LiteralFloat Float
   | LiteralBoolean Bool
   | LiteralNull
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance ToJSON LiteralValue
 
 type ForAllExpr (c :: Type -> Constraint) etype =
   ( c (ExprE "lit" "ctx" etype),

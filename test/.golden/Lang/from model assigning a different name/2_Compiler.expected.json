@@ -1,0 +1,37 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          [
+            "l",
+            {
+              "columns": {
+                "language_id": {
+                  "tag": "IntType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                },
+                "name": {
+                  "tag": "StringType"
+                }
+              },
+              "defaultSingularName": "language",
+              "implicitWhere": null,
+              "relatedTables": {
+                "film": [
+                  "language_id",
+                  "language_id"
+                ]
+              },
+              "tableName": "language"
+            }
+          ]
+        ],
+        "tag": "From"
+      }
+    ]
+  }
+}

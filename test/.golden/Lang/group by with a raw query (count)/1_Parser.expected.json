@@ -1,0 +1,84 @@
+[
+  {
+    "contents": [
+      {
+        "begin": 0,
+        "end": 11
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 5,
+              "end": 11
+            },
+            "Cities"
+          ],
+          "tag": "Ref"
+        }
+      ]
+    ],
+    "tag": "From"
+  },
+  {
+    "contents": [
+      {
+        "begin": 12,
+        "end": 18
+      },
+      [
+        [
+          {
+            "contents": [
+              {
+                "begin": 25,
+                "end": 37
+              },
+              {
+                "contents": [
+                  {
+                    "begin": 21,
+                    "end": 25
+                  },
+                  "city"
+                ],
+                "tag": "Ref"
+              },
+              "country_id"
+            ],
+            "tag": "Prop"
+          },
+          null
+        ]
+      ],
+      [
+        {
+          "contents": [
+            {
+              "begin": 41,
+              "end": 63
+            },
+            "count",
+            {
+              "contents": [
+                {
+                  "begin": 53,
+                  "end": 63
+                },
+                [
+                  {
+                    "Left": "count(*)"
+                  }
+                ]
+              ],
+              "tag": "RawSql"
+            }
+          ],
+          "tag": "Let"
+        }
+      ]
+    ],
+    "tag": "GroupBy"
+  }
+]

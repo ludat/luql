@@ -1,0 +1,128 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          [
+            "country",
+            {
+              "columns": {
+                "country": {
+                  "tag": "StringType"
+                },
+                "country_id": {
+                  "tag": "IntType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                }
+              },
+              "defaultSingularName": "country",
+              "implicitWhere": null,
+              "relatedTables": {
+                "city": [
+                  "country_id",
+                  "country_id"
+                ]
+              },
+              "tableName": "country"
+            }
+          ]
+        ],
+        "tag": "From"
+      },
+      {
+        "contents": [
+          [],
+          [
+            "city",
+            {
+              "columns": {
+                "city": {
+                  "tag": "StringType"
+                },
+                "city_id": {
+                  "tag": "IntType"
+                },
+                "country_id": {
+                  "tag": "IntType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                }
+              },
+              "defaultSingularName": "city",
+              "implicitWhere": null,
+              "relatedTables": {
+                "country": [
+                  "country_id",
+                  "country_id"
+                ]
+              },
+              "tableName": "city"
+            }
+          ],
+          {
+            "contents": [
+              {
+                "tag": "BooleanType"
+              },
+              [
+                "==",
+                [
+                  {
+                    "tag": "IntType"
+                  },
+                  {
+                    "tag": "IntType"
+                  }
+                ]
+              ],
+              [
+                {
+                  "contents": {
+                    "contents": [
+                      {
+                        "tag": "IntType"
+                      },
+                      {
+                        "contents": [
+                          "country",
+                          "country_id"
+                        ],
+                        "tag": "ColumnWithTable"
+                      }
+                    ],
+                    "tag": "ComputedColumn"
+                  },
+                  "tag": "ExprExt"
+                },
+                {
+                  "contents": {
+                    "contents": [
+                      {
+                        "tag": "IntType"
+                      },
+                      {
+                        "contents": [
+                          "city",
+                          "country_id"
+                        ],
+                        "tag": "ColumnWithTable"
+                      }
+                    ],
+                    "tag": "ComputedColumn"
+                  },
+                  "tag": "ExprExt"
+                }
+              ]
+            ],
+            "tag": "Apply"
+          }
+        ],
+        "tag": "Join"
+      }
+    ]
+  }
+}

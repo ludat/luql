@@ -1,0 +1,87 @@
+[
+  {
+    "contents": {
+      "contents": {
+        "begin": 0,
+        "end": 0
+      },
+      "tag": "ExtStmtEmptyLine"
+    },
+    "tag": "StmtExt"
+  },
+  {
+    "contents": {
+      "contents": {
+        "begin": 1,
+        "end": 1
+      },
+      "tag": "ExtStmtEmptyLine"
+    },
+    "tag": "StmtExt"
+  },
+  {
+    "contents": {
+      "contents": {
+        "begin": 2,
+        "end": 2
+      },
+      "tag": "ExtStmtEmptyLine"
+    },
+    "tag": "StmtExt"
+  },
+  {
+    "contents": [
+      {
+        "begin": 3,
+        "end": 17
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 8,
+              "end": 17
+            },
+            "Languages"
+          ],
+          "tag": "Ref"
+        }
+      ]
+    ],
+    "tag": "From"
+  },
+  {
+    "contents": [
+      {
+        "begin": 18,
+        "end": 27
+      },
+      "a",
+      {
+        "contents": [
+          {
+            "begin": 26,
+            "end": 27
+          },
+          {
+            "contents": 7,
+            "tag": "LiteralInt"
+          }
+        ],
+        "tag": "Lit"
+      }
+    ],
+    "tag": "Let"
+  },
+  {
+    "contents": {
+      "contents": {
+        "begin": 28,
+        "end": 28
+      },
+      "tag": "ExtStmtEmptyLine"
+    },
+    "tag": "StmtExt"
+  }
+]

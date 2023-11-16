@@ -1,0 +1,47 @@
+[
+  {
+    "contents": [
+      {
+        "begin": 0,
+        "end": 10
+      },
+      "a",
+      {
+        "contents": [
+          {
+            "begin": 8,
+            "end": 10
+          },
+          {
+            "contents": 23,
+            "tag": "LiteralInt"
+          }
+        ],
+        "tag": "Lit"
+      }
+    ],
+    "tag": "Let"
+  },
+  {
+    "contents": [
+      {
+        "begin": 11,
+        "end": 25
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 16,
+              "end": 25
+            },
+            "Languages"
+          ],
+          "tag": "Ref"
+        }
+      ]
+    ],
+    "tag": "From"
+  }
+]

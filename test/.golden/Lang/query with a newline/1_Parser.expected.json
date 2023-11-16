@@ -1,0 +1,57 @@
+[
+  {
+    "contents": [
+      {
+        "begin": 0,
+        "end": 14
+      },
+      [
+        null,
+        {
+          "contents": [
+            {
+              "begin": 5,
+              "end": 14
+            },
+            "Languages"
+          ],
+          "tag": "Ref"
+        }
+      ]
+    ],
+    "tag": "From"
+  },
+  {
+    "contents": {
+      "contents": {
+        "begin": 15,
+        "end": 15
+      },
+      "tag": "ExtStmtEmptyLine"
+    },
+    "tag": "StmtExt"
+  },
+  {
+    "contents": [
+      {
+        "begin": 16,
+        "end": 25
+      },
+      "a",
+      {
+        "contents": [
+          {
+            "begin": 24,
+            "end": 25
+          },
+          {
+            "contents": 7,
+            "tag": "LiteralInt"
+          }
+        ],
+        "tag": "Lit"
+      }
+    ],
+    "tag": "Let"
+  }
+]

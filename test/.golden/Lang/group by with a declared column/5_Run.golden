@@ -1,3 +1,0 @@
-[ SqlRuntimeRow
-    (fromList [ ( "kept" , SqlInt 7 ) , ( "new" , SqlInt 7 ) ])
-]

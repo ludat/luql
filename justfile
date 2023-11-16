@@ -2,16 +2,19 @@ default:
   just ghcid
 
 test: db
-  cabal test --test-show-details=streaming --test-options='--golden-start --golden-reset --retries=0'
+  cabal test --test-show-details=streaming --test-options='--print-slow-items --format=specdoc --color'
 
 clean-golden:
   rm -r ./test/.golden
+
+commit-golden:
+  find -name '*.actual*' | parallel --plus mv -v {} {/actual/expected}
 
 test-watch: db
   watchexec -w test/ -w lib/ -e hs just test
 
 ghcid: db
-  ghcid -a -c "cabal repl luql-test -fghci-load-test-with-lib" --test=':run Main.main --golden-reset --golden-start --retries=0' --warnings
+  ghcid -a -c "cabal repl luql-test -fghci-load-test-with-lib" --test=':run Main.main --print-slow-items --format=specdoc --color' --warnings
 
 db:
   docker-compose up -d

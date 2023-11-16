@@ -14,7 +14,7 @@ import Data.Text (Text, unpack)
 import Database.PostgreSQL.Query (SqlBuilder)
 import Database.PostgreSQL.Query qualified as PG
 import Database.PostgreSQL.Simple qualified as PG
-import Database.PostgreSQL.Simple.Types (Identifier (..), QualifiedIdentifier (..))
+import Database.PostgreSQL.Simple.Types (QualifiedIdentifier (..))
 
 import LuQL.Compiler (FunctionNotation (..))
 import LuQL.SqlGeneration
@@ -50,7 +50,7 @@ renderOrderDirection (Just Desc) = [PG.sqlExp| DESC|]
 
 renderFrom :: Maybe PartialFromTable -> SqlBuilder
 renderFrom (Just (SubqueryTable fromPartialQuery aliasName)) =
-  [PG.sqlExp|FROM (^{renderPartialQuery fromPartialQuery}) AS ^{aliasName}|]
+  [PG.sqlExp|FROM (^{renderPartialQuery fromPartialQuery}) AS ^{toSql aliasName}|]
 renderFrom (Just (LiteralTable table)) =
   [PG.sqlExp|FROM (^{renderFromTable table}) AS "t"|]
 renderFrom Nothing =
@@ -61,11 +61,15 @@ renderFromTable FromTable {..} =
   let columnRenames =
         getTableColumns
           & fmap
-            ( \name ->
-                [PG.sqlExp|^{qualifyIdentifier getTableName name} AS ^{renderNameForTableColumn getTableAlias name}|]
+            ( \(name, alias) ->
+              [PG.sqlExp|^{qualifyIdentifier getTableName name} AS ^{toSql alias}|]
             )
-          & mconcat . intersperse ", "
-   in [PG.sqlExp|SELECT ^{columnRenames} FROM ^{getTableName}|]
+          & intersperse ", "
+          & mconcat
+   in [PG.sqlExp|SELECT ^{columnRenames} FROM ^{toSql getTableName}|]
+
+toSql :: SqlIdentifier -> QualifiedIdentifier
+toSql identifier = QualifiedIdentifier Nothing identifier.asText
 
 renderGroupBy :: Maybe GroupByDefinition -> Maybe SqlBuilder
 renderGroupBy Nothing = Nothing
@@ -89,7 +93,7 @@ renderJoin (table, conds) =
   let
     ta = table.getTableAlias
   in
-  [PG.sqlExp|JOIN (^{renderFromTable table}) AS ^{ta} ON ^{fromJust $ renderConds conds}|]
+  [PG.sqlExp|JOIN (^{renderFromTable table}) AS ^{toSql ta} ON ^{fromJust $ renderConds conds}|]
 
 renderSelectedColumns :: [SelectedColumn] -> SqlBuilder
 renderSelectedColumns columns =
@@ -97,17 +101,14 @@ renderSelectedColumns columns =
     & fmap
       ( \case
           SelectFromTable tableName ->
-            [PG.sqlExp|^{tableName}.*|]
+            [PG.sqlExp|^{toSql tableName}.*|]
           SelectNewColumn qe name ->
-            [PG.sqlExp|^{renderExpr qe} AS ^{name}|]
+            [PG.sqlExp|^{renderExpr qe} AS ^{toSql name}|]
           SelectColumnFromTable qualifiedIdentifier ->
-            [PG.sqlExp|^{qualifiedIdentifier}|]
+            [PG.sqlExp|^{toSql qualifiedIdentifier}|]
       )
-    & mconcat . intersperse ", "
-
-renderNameForTableColumn :: Identifier -> Identifier -> SqlBuilder
-renderNameForTableColumn tableName columnName =
-  [PG.sqlExp|^{compileNameForTableColumn tableName columnName}|]
+    & intersperse ", "
+    & mconcat
 
 renderWheres :: [SqlExpression] -> Maybe SqlBuilder
 renderWheres [] = Nothing
@@ -126,7 +127,7 @@ renderExpr (LiteralInt n) =
 renderExpr (LiteralFloat n) =
   [PG.sqlExp|#{n}|]
 renderExpr (Ref name) =
-  [PG.sqlExp|^{name}|]
+  [PG.sqlExp|^{toSql name}|]
 renderExpr (LiteralString s) =
   [PG.sqlExp|#{s}|]
 renderExpr (LiteralBoolean b) =
@@ -165,8 +166,8 @@ text2SqlBuilder =
 
 renderSqlBuilder :: PG.Connection -> SqlBuilder -> IO PG.Query
 renderSqlBuilder conn sqlBuilder = do
-  (sqlQuery, logs) <- PG.runSqlBuilder conn PG.defaultLogMasker sqlBuilder
-  BS.putStrLn logs
+  (sqlQuery, _logs) <- PG.runSqlBuilder conn PG.defaultLogMasker sqlBuilder
+  -- BS.putStrLn logs
   pure sqlQuery
 
 runQueryBuilder :: (PG.FromRow r) => PG.Connection -> SqlBuilder -> IO [r]
@@ -174,7 +175,6 @@ runQueryBuilder conn sqlBuilder = do
   rawQuery <- renderSqlBuilder conn sqlBuilder
   PG.query_ conn rawQuery
 
--- TODO esto esta repetido en SqlGeneration.hs
-qualifyIdentifier :: Identifier -> Identifier -> QualifiedIdentifier
+qualifyIdentifier :: SqlIdentifier -> SqlIdentifier -> QualifiedIdentifier
 qualifyIdentifier table column =
-  QualifiedIdentifier (Just $ fromIdentifier table) (fromIdentifier column)
+  QualifiedIdentifier (Just table.asText) (column.asText)

@@ -1,0 +1,123 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          [
+            "city",
+            {
+              "columns": {
+                "city": {
+                  "tag": "StringType"
+                },
+                "city_id": {
+                  "tag": "IntType"
+                },
+                "country_id": {
+                  "tag": "IntType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                }
+              },
+              "defaultSingularName": "city",
+              "implicitWhere": null,
+              "relatedTables": {
+                "country": [
+                  "country_id",
+                  "country_id"
+                ]
+              },
+              "tableName": "city"
+            }
+          ]
+        ],
+        "tag": "From"
+      },
+      {
+        "contents": [
+          [],
+          [
+            [
+              {
+                "contents": {
+                  "contents": [
+                    {
+                      "contents": {
+                        "tag": "IntType"
+                      },
+                      "tag": "KeptByGroupBy"
+                    },
+                    {
+                      "contents": [
+                        "city",
+                        "country_id"
+                      ],
+                      "tag": "ColumnWithTable"
+                    }
+                  ],
+                  "tag": "ComputedColumn"
+                },
+                "tag": "ExprExt"
+              },
+              null
+            ]
+          ],
+          [
+            {
+              "contents": [
+                [],
+                "max_city",
+                {
+                  "contents": [
+                    {
+                      "tag": "IntType"
+                    },
+                    [
+                      "max",
+                      [
+                        {
+                          "contents": {
+                            "tag": "IntType"
+                          },
+                          "tag": "KeptByGroupBy"
+                        }
+                      ]
+                    ],
+                    [
+                      {
+                        "contents": {
+                          "contents": [
+                            {
+                              "contents": {
+                                "tag": "IntType"
+                              },
+                              "tag": "KeptByGroupBy"
+                            },
+                            {
+                              "contents": [
+                                "city",
+                                "country_id"
+                              ],
+                              "tag": "ColumnWithTable"
+                            }
+                          ],
+                          "tag": "ComputedColumn"
+                        },
+                        "tag": "ExprExt"
+                      }
+                    ]
+                  ],
+                  "tag": "Apply"
+                }
+              ],
+              "tag": "Let"
+            }
+          ]
+        ],
+        "tag": "GroupBy"
+      }
+    ]
+  }
+}

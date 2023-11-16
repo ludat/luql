@@ -72,11 +72,11 @@ models =
     italian =
       languages
         { defaultSingularName = "italian"
-        , implicitWhere = Just $ \model ->
+        , implicitWhere = Just $
             Apply
               nullRange
               (Ref nullRange "==")
-              [ Prop nullRange (Ref nullRange model) "name"
+              [ Prop nullRange (Ref nullRange "self") "name"
               , Lit nullRange $ LiteralString "Italian"
               ]
         }
@@ -114,11 +114,11 @@ models =
               , ("last_update", TimestampType)
               , ("active", IntType)
               ],
-          implicitWhere = Just $ \model ->
+          implicitWhere = Just $
             Apply
               nullRange
               (Ref nullRange "==")
-              [ Prop nullRange (Ref nullRange model) "active"
+              [ Prop nullRange (Ref nullRange "self") "active"
               , Lit nullRange $ LiteralInt 1
               ],
           relatedTables =

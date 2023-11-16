@@ -1,0 +1,142 @@
+[
+  {
+    "contents": [
+      {
+        "begin": 0,
+        "end": 12
+      },
+      "kept",
+      {
+        "contents": [
+          {
+            "begin": 11,
+            "end": 12
+          },
+          {
+            "contents": 7,
+            "tag": "LiteralInt"
+          }
+        ],
+        "tag": "Lit"
+      }
+    ],
+    "tag": "Let"
+  },
+  {
+    "contents": [
+      {
+        "begin": 13,
+        "end": 25
+      },
+      "lost",
+      {
+        "contents": [
+          {
+            "begin": 24,
+            "end": 25
+          },
+          {
+            "contents": 2,
+            "tag": "LiteralInt"
+          }
+        ],
+        "tag": "Lit"
+      }
+    ],
+    "tag": "Let"
+  },
+  {
+    "contents": [
+      {
+        "begin": 26,
+        "end": 32
+      },
+      [
+        [
+          {
+            "contents": [
+              {
+                "begin": 35,
+                "end": 40
+              },
+              "kept"
+            ],
+            "tag": "Ref"
+          },
+          null
+        ]
+      ],
+      [
+        {
+          "contents": [
+            {
+              "begin": 44,
+              "end": 58
+            },
+            "new",
+            {
+              "contents": [
+                {
+                  "begin": 54,
+                  "end": 58
+                },
+                "kept"
+              ],
+              "tag": "Ref"
+            }
+          ],
+          "tag": "Let"
+        }
+      ]
+    ],
+    "tag": "GroupBy"
+  },
+  {
+    "contents": [
+      {
+        "begin": 61,
+        "end": 67
+      },
+      [
+        [
+          {
+            "contents": [
+              {
+                "begin": 70,
+                "end": 73
+              },
+              "new"
+            ],
+            "tag": "Ref"
+          },
+          null
+        ]
+      ]
+    ],
+    "tag": "OrderBy"
+  },
+  {
+    "contents": [
+      {
+        "begin": 74,
+        "end": 80
+      },
+      [
+        [
+          {
+            "contents": [
+              {
+                "begin": 83,
+                "end": 87
+              },
+              "kept"
+            ],
+            "tag": "Ref"
+          },
+          null
+        ]
+      ]
+    ],
+    "tag": "OrderBy"
+  }
+]

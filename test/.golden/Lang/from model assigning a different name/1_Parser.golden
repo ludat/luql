@@ -1,8 +1,0 @@
-Right
-  RawQuery
-    { unRawQuery =
-        [ From
-            Range { begin = 0 , end = 15 }
-            ( Just "l" , Ref Range { begin = 5 , end = 15 } "Languages" )
-        ]
-    }

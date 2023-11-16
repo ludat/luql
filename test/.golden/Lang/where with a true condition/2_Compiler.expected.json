@@ -1,0 +1,55 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          [
+            "language",
+            {
+              "columns": {
+                "language_id": {
+                  "tag": "IntType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                },
+                "name": {
+                  "tag": "StringType"
+                }
+              },
+              "defaultSingularName": "language",
+              "implicitWhere": null,
+              "relatedTables": {
+                "film": [
+                  "language_id",
+                  "language_id"
+                ]
+              },
+              "tableName": "language"
+            }
+          ]
+        ],
+        "tag": "From"
+      },
+      {
+        "contents": [
+          [],
+          {
+            "contents": [
+              {
+                "tag": "BooleanType"
+              },
+              {
+                "contents": true,
+                "tag": "LiteralBoolean"
+              }
+            ],
+            "tag": "Lit"
+          }
+        ],
+        "tag": "Where"
+      }
+    ]
+  }
+}

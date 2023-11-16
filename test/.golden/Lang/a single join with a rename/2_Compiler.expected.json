@@ -1,0 +1,128 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          [
+            "l",
+            {
+              "columns": {
+                "language_id": {
+                  "tag": "IntType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                },
+                "name": {
+                  "tag": "StringType"
+                }
+              },
+              "defaultSingularName": "language",
+              "implicitWhere": null,
+              "relatedTables": {
+                "film": [
+                  "language_id",
+                  "language_id"
+                ]
+              },
+              "tableName": "language"
+            }
+          ]
+        ],
+        "tag": "From"
+      },
+      {
+        "contents": [
+          [],
+          [
+            "film",
+            {
+              "columns": {
+                "description": {
+                  "tag": "StringType"
+                },
+                "film_id": {
+                  "tag": "IntType"
+                },
+                "language_id": {
+                  "tag": "IntType"
+                },
+                "title": {
+                  "tag": "StringType"
+                }
+              },
+              "defaultSingularName": "film",
+              "implicitWhere": null,
+              "relatedTables": {
+                "language": [
+                  "language_id",
+                  "language_id"
+                ]
+              },
+              "tableName": "film"
+            }
+          ],
+          {
+            "contents": [
+              {
+                "tag": "BooleanType"
+              },
+              [
+                "==",
+                [
+                  {
+                    "tag": "IntType"
+                  },
+                  {
+                    "tag": "IntType"
+                  }
+                ]
+              ],
+              [
+                {
+                  "contents": {
+                    "contents": [
+                      {
+                        "tag": "IntType"
+                      },
+                      {
+                        "contents": [
+                          "l",
+                          "language_id"
+                        ],
+                        "tag": "ColumnWithTable"
+                      }
+                    ],
+                    "tag": "ComputedColumn"
+                  },
+                  "tag": "ExprExt"
+                },
+                {
+                  "contents": {
+                    "contents": [
+                      {
+                        "tag": "IntType"
+                      },
+                      {
+                        "contents": [
+                          "film",
+                          "language_id"
+                        ],
+                        "tag": "ColumnWithTable"
+                      }
+                    ],
+                    "tag": "ComputedColumn"
+                  },
+                  "tag": "ExprExt"
+                }
+              ]
+            ],
+            "tag": "Apply"
+          }
+        ],
+        "tag": "Join"
+      }
+    ]
+  }
+}

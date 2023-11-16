@@ -1,0 +1,19 @@
+{
+  "fromTable": null,
+  "groupBy": null,
+  "joins": [],
+  "orderBy": [],
+  "selectedColumns": [
+    {
+      "contents": [
+        {
+          "contents": 23,
+          "tag": "LiteralInt"
+        },
+        "a"
+      ],
+      "tag": "SelectNewColumn"
+    }
+  ],
+  "wheres": []
+}

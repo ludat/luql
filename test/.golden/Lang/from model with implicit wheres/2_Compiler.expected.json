@@ -1,0 +1,163 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          [
+            "customer",
+            {
+              "columns": {
+                "active": {
+                  "tag": "IntType"
+                },
+                "activebool": {
+                  "tag": "BooleanType"
+                },
+                "address_id": {
+                  "tag": "StringType"
+                },
+                "create_date": {
+                  "tag": "DateType"
+                },
+                "customer_id": {
+                  "tag": "IntType"
+                },
+                "email": {
+                  "tag": "StringType"
+                },
+                "first_name": {
+                  "tag": "StringType"
+                },
+                "last_name": {
+                  "tag": "StringType"
+                },
+                "last_update": {
+                  "tag": "TimestampType"
+                },
+                "store_id": {
+                  "tag": "IntType"
+                }
+              },
+              "defaultSingularName": "customer",
+              "implicitWhere": {
+                "contents": [
+                  {
+                    "begin": -1,
+                    "end": -1
+                  },
+                  {
+                    "contents": [
+                      {
+                        "begin": -1,
+                        "end": -1
+                      },
+                      "=="
+                    ],
+                    "tag": "Ref"
+                  },
+                  [
+                    {
+                      "contents": [
+                        {
+                          "begin": -1,
+                          "end": -1
+                        },
+                        {
+                          "contents": [
+                            {
+                              "begin": -1,
+                              "end": -1
+                            },
+                            "self"
+                          ],
+                          "tag": "Ref"
+                        },
+                        "active"
+                      ],
+                      "tag": "Prop"
+                    },
+                    {
+                      "contents": [
+                        {
+                          "begin": -1,
+                          "end": -1
+                        },
+                        {
+                          "contents": 1,
+                          "tag": "LiteralInt"
+                        }
+                      ],
+                      "tag": "Lit"
+                    }
+                  ]
+                ],
+                "tag": "Apply"
+              },
+              "relatedTables": {},
+              "tableName": "customer"
+            }
+          ]
+        ],
+        "tag": "From"
+      },
+      {
+        "contents": [
+          [],
+          {
+            "contents": [
+              {
+                "tag": "BooleanType"
+              },
+              [
+                "==",
+                [
+                  {
+                    "tag": "IntType"
+                  },
+                  {
+                    "tag": "IntType"
+                  }
+                ]
+              ],
+              [
+                {
+                  "contents": {
+                    "contents": [
+                      {
+                        "tag": "IntType"
+                      },
+                      {
+                        "contents": [
+                          "customer",
+                          "active"
+                        ],
+                        "tag": "ColumnWithTable"
+                      }
+                    ],
+                    "tag": "ComputedColumn"
+                  },
+                  "tag": "ExprExt"
+                },
+                {
+                  "contents": [
+                    {
+                      "tag": "IntType"
+                    },
+                    {
+                      "contents": 1,
+                      "tag": "LiteralInt"
+                    }
+                  ],
+                  "tag": "Lit"
+                }
+              ]
+            ],
+            "tag": "Apply"
+          }
+        ],
+        "tag": "Where"
+      }
+    ]
+  }
+}

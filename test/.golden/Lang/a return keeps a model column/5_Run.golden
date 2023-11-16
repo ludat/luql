@@ -1,7 +1,0 @@
-[ SqlRuntimeRow (fromList [ ( "l.language_id" , SqlInt 1 ) ])
-, SqlRuntimeRow (fromList [ ( "l.language_id" , SqlInt 2 ) ])
-, SqlRuntimeRow (fromList [ ( "l.language_id" , SqlInt 3 ) ])
-, SqlRuntimeRow (fromList [ ( "l.language_id" , SqlInt 4 ) ])
-, SqlRuntimeRow (fromList [ ( "l.language_id" , SqlInt 5 ) ])
-, SqlRuntimeRow (fromList [ ( "l.language_id" , SqlInt 6 ) ])
-]

@@ -8,7 +8,7 @@ import Data.Text.Lazy qualified as TL
 import LuQL.Compiler
 import LuQL.Parser
 
-import Test.Syd
+import Test.Hspec
 
 import Tests.Utils (models)
 

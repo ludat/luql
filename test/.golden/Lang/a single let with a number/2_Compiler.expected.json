@@ -1,0 +1,25 @@
+{
+  "Right": {
+    "unCompiledQuery": [
+      {
+        "contents": [
+          [],
+          "a",
+          {
+            "contents": [
+              {
+                "tag": "IntType"
+              },
+              {
+                "contents": 23,
+                "tag": "LiteralInt"
+              }
+            ],
+            "tag": "Lit"
+          }
+        ],
+        "tag": "Let"
+      }
+    ]
+  }
+}
