@@ -3,7 +3,7 @@ module LangSpec
     ) where
 
 import Control.Exception (bracket, evaluate)
-import Control.Monad (unless, when)
+import Control.Monad (when)
 
 import Data.Aeson
 import Data.Aeson.Encode.Pretty (Config (..), Indent (..), defConfig, encodePretty')
@@ -24,7 +24,7 @@ import LuQL.Render
 import LuQL.Runner (SqlRuntimeRow (..))
 import LuQL.SqlGeneration qualified
 
-import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.Directory (createDirectoryIfMissing, doesFileExist, removeFile)
 import System.FilePath (splitExtensions)
 import System.Timeout
 
@@ -178,16 +178,28 @@ shouldMatchSnapshot' :: HasCallStack => ByteString -> FilePath -> IO ()
 shouldMatchSnapshot' actual filepath = do
   let expectedFilepath = addExtension ".expected" filepath
   let actualFilepath = addExtension ".actual" filepath
+
   expectedFilepathExists <- doesFileExist expectedFilepath
-  unless expectedFilepathExists $ do
-    BS.writeFile actualFilepath actual
-    fail [__i|expected result file not present: #{expectedFilepath}, actual result is written to #{actualFilepath}|]
+  if expectedFilepathExists
+    then do
+      expectedText <- BS.readFile expectedFilepath
 
-  expectedText <- BS.readFile expectedFilepath
+      if (actual /= expectedText)
+        then do
+          BS.writeFile actualFilepath actual
+          fail [i|expected and actual are not equal: diff #{expectedFilepath} #{actualFilepath}"|]
+        else do
+          removeFileIfExists actualFilepath
 
-  when (actual /= expectedText) $ do
-    BS.writeFile actualFilepath actual
-    fail [i|expected and actual are not equal: diff #{expectedFilepath} #{actualFilepath}"|]
+    else do
+      BS.writeFile actualFilepath actual
+      fail [__i|expected result file not present: #{expectedFilepath}, actual result is written to #{actualFilepath}|]
+
+removeFileIfExists :: FilePath -> IO ()
+removeFileIfExists filepath = do
+  exists <- doesFileExist filepath
+  when exists $ do
+    removeFile filepath
 
 itMatchesSnapshot :: HasCallStack => String -> Text -> SpecWith PG.Connection
 itMatchesSnapshot name program = describe name $ do
@@ -200,7 +212,7 @@ itMatchesSnapshot name program = describe name $ do
         & fmap (fromMaybe (error "timeout parsing"))
         & fmap (either (error . errorBundlePretty) id)
 
-    encodeToJSON parsedProgram `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/1_Parser.json|]
+    parsedProgram `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/1_Parser.json|]
 
     let compiledProgram :: Either [Error] CompiledQuery
         compiledProgram =
@@ -234,4 +246,3 @@ encodeToJSON = BS.toStrict . encodePretty'
   { confIndent = Spaces 2
   , confTrailingNewline = True
   }
-

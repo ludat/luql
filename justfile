@@ -31,3 +31,6 @@ pgcli:
 
 stop:
   docker-compose down
+
+format:
+  find test lib -name '*.hs' | grep -v 'test/Spec.hs' | xargs stylish-haskell -i
