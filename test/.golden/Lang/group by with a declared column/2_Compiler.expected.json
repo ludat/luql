@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -150,6 +150,11 @@
         ],
         "tag": "OrderBy"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "kept",
+      "new"
     ]
   }
 }

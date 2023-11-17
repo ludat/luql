@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -123,6 +123,16 @@
         ],
         "tag": "Join"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "film.description",
+      "film.film_id",
+      "film.language_id",
+      "film.title",
+      "l.language_id",
+      "l.last_update",
+      "l.name"
     ]
   }
 }

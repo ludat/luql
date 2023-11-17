@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module LuQL where
 
 import Data.String.Interpolate (iii)
@@ -10,6 +12,9 @@ import LuQL.Parser
 import LuQL.Render
 import LuQL.Runner
 import LuQL.SqlGeneration
+import Data.Text (Text)
+import GHC.Generics (Generic)
+import Data.Aeson
 
 completeQuery :: Models -> Int -> RawQuery -> [Completion]
 completeQuery models position rawQuery = do
@@ -22,11 +27,30 @@ compileQuery models rawQuery = do
         (Left errors) ->
           error [iii|errores aparecieron en la query: #{errors}|]
 
-      partialQuery = LuQL.SqlGeneration.compileStatements typecheckedStatements.unCompiledQuery
+      partialQuery = LuQL.SqlGeneration.compileStatements typecheckedStatements.compiledStatements
 
   renderPartialQuery partialQuery
 
-runQuery :: Models -> PG.Connection -> RawQuery -> IO [SqlRuntimeRow]
+data QueryResult = QueryResult
+  { rows :: [SqlRuntimeRow]
+  , columns :: [Text]
+  , graph :: Maybe DrawStrategy
+  } deriving (Show, Generic, ToJSON)
+
+runQuery :: Models -> PG.Connection -> RawQuery -> IO QueryResult
 runQuery models conn program = do
-  let sqlBuilder = compileQuery models program
-  runQueryBuilder conn [PG.sqlExp|^{sqlBuilder}|]
+  let compiledQuery = case LuQL.Compiler.compileProgram models program of
+        (Right result) ->
+          result
+        (Left errors) ->
+          error [iii|errores aparecieron en la query: #{errors}|]
+
+  let partialQuery = LuQL.SqlGeneration.compileStatements compiledQuery.compiledStatements
+
+  let sqlBuilder = renderPartialQuery partialQuery
+  rows <- runQueryBuilder conn sqlBuilder
+  pure $
+    QueryResult
+    rows
+    compiledQuery.resultColumns
+    compiledQuery.graph

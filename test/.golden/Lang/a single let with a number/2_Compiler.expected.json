@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -20,6 +20,10 @@
         ],
         "tag": "Let"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "a"
     ]
   }
 }

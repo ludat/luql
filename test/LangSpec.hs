@@ -2,7 +2,7 @@ module LangSpec
     ( spec
     ) where
 
-import Control.Exception (bracket, evaluate)
+import Control.Exception (bracket, evaluate, ErrorCall, catch)
 import Control.Monad (when)
 
 import Data.Aeson
@@ -39,6 +39,11 @@ spec =  aroundAll withDatabase $ do
   itMatchesSnapshot "from model"
     [__i|
       from Languages
+    |]
+
+  itMatchesSnapshot "query with invalid statement"
+    [__i|
+      something invalid
     |]
 
   itMatchesSnapshot "query with a newline"
@@ -203,7 +208,7 @@ removeFileIfExists filepath = do
 
 itMatchesSnapshot :: HasCallStack => String -> Text -> SpecWith PG.Connection
 itMatchesSnapshot name program = describe name $ do
-  it "matches the snapshots" $ \conn -> do
+  it "matches the snapshots" $ \conn -> ((do
     createDirectoryIfMissing True ("test/.golden/Lang/" <> name)
     Text.encodeUtf8 program `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/0_Raw.luql|]
 
@@ -225,7 +230,7 @@ itMatchesSnapshot name program = describe name $ do
         partialSqlQuery =
           compiledProgram
             & either (\e -> error [i|#{e}|]) id
-            & (.unCompiledQuery)
+            & (.compiledStatements)
             & LuQL.SqlGeneration.compileStatements
 
     partialSqlQuery `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/3_SqlGeneration.json|]
@@ -239,6 +244,9 @@ itMatchesSnapshot name program = describe name $ do
 
     queryResults <- PG.query_ @SqlRuntimeRow conn rawSqlQuery
     queryResults `shouldMatchSnapshot` [i|test/.golden/Lang/#{name}/5_Run.json|]
+    ) `catch` (\(e :: ErrorCall) ->
+      [i|#{show e}|] `shouldMatchSnapshot'` [i|test/.golden/Lang/#{name}/999_Exception.txt|]
+    ))
 
 encodeToJSON :: ToJSON a => a -> ByteString
 encodeToJSON = BS.toStrict . encodePretty'

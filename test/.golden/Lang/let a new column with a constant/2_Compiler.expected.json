@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -51,6 +51,13 @@
         ],
         "tag": "Let"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "language.language_id",
+      "language.last_update",
+      "language.name",
+      "column"
     ]
   }
 }

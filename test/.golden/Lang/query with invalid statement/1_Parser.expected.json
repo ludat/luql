@@ -1,0 +1,15 @@
+[
+  {
+    "contents": {
+      "contents": [
+        {
+          "begin": 0,
+          "end": 17
+        },
+        "something invalid"
+      ],
+      "tag": "ExtStmtInvalid"
+    },
+    "tag": "StmtExt"
+  }
+]

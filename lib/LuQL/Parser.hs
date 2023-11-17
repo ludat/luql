@@ -366,7 +366,7 @@ emptyLineParser :: Parser (QueryStatement Raw)
 emptyLineParser = do
   pos <- getOffset
   void $ optional spaceConsumer
-
+  lookAhead (void eol <|> eof)
   pure $ StmtExt $ ExtStmtEmptyLine (Range pos pos)
 
 invalidStatementParser :: Parser (QueryStatement Raw)

@@ -27,7 +27,7 @@ import GHC.Generics (Generic)
 
 newtype SqlRuntimeRow
   = SqlRuntimeRow (Map Text SqlRuntimeValue)
-  deriving (Show)
+  deriving (Show, Generic)
   deriving newtype (ToJSON)
 
 data SqlRuntimeValue

@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -158,6 +158,19 @@
         ],
         "tag": "Where"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "customer.active",
+      "customer.activebool",
+      "customer.address_id",
+      "customer.create_date",
+      "customer.customer_id",
+      "customer.email",
+      "customer.first_name",
+      "customer.last_name",
+      "customer.last_update",
+      "customer.store_id"
     ]
   }
 }

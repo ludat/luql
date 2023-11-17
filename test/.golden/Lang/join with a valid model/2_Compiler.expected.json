@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -123,6 +123,16 @@
         ],
         "tag": "Join"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "city.city",
+      "city.city_id",
+      "city.country_id",
+      "city.last_update",
+      "country.country",
+      "country.country_id",
+      "country.last_update"
     ]
   }
 }

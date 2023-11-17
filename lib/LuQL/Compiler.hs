@@ -22,16 +22,12 @@ import Control.Monad.Reader
 import Control.Monad.State.Strict (StateT (..), get, gets, modify', put)
 import Control.Monad.Validate
 
-import Data.Aeson (ToJSON (..), ToJSONKey (toJSONKey), ToJSONKeyFunction (ToJSONKeyText),
-                   Value (..))
-import Data.Aeson.Encoding qualified as Aeson.Encoding
-import Data.Aeson.Key qualified as Key
 import Data.Aeson.Types
 import Data.Function ((&))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.String.Interpolate (iii)
+import Data.String.Interpolate (iii, i)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Void (Void)
@@ -122,18 +118,56 @@ data Error
   = CompilerError Text Range
   deriving (Eq, Show, Generic, ToJSON)
 
-data CompiledQuery = CompiledQuery {unCompiledQuery :: [QueryStatement Compiled]}
+data CompiledQuery = CompiledQuery
+  { compiledStatements :: [QueryStatement Compiled]
+  , resultColumns :: [Text]
+  , graph :: Maybe DrawStrategy
+  }
   deriving (Show, Eq, Generic)
 
 instance ToJSON CompiledQuery
 
 type Models = Map Text ModelDefinition
 
+data BarChartDefinition = BarChartDefinition
+  { xAxis :: Text
+  , yAxis :: Text
+  } deriving (Show, Eq, Generic, ToJSON)
+
+data SingleValueGaugeDefinition = SingleValueGaugeDefinition
+  { column :: Text
+  } deriving (Show, Eq, Generic, ToJSON)
+
+data DrawStrategy
+  = BarChart BarChartDefinition
+  | SingleValueGauge SingleValueGaugeDefinition
+  deriving (Show, Eq, Generic, ToJSON)
+
 compileProgram :: Models -> RawQuery -> Either [Error] CompiledQuery
 compileProgram models rawQuery =
   let compilerState = compileProgram' models Nothing rawQuery
    in if null compilerState.errors
-        then Right $ CompiledQuery compilerState.emitedCompiledStatements
+        then
+          let
+            newColumns =
+              compilerState.typeInfo.variablesInScope
+              & mapMaybe (\(name, value) ->
+                  case value of
+                    (ExprExt (ComputedColumn _ _)) -> Just [name]
+                    (ExprExt (ComputedModel (ModelType cols) _ _ _)) ->
+                        cols
+                        & Map.toList
+                        & fmap (\(n, _type) -> [i|#{name}.#{n}|])
+                        & Just
+                    _ -> Nothing
+                )
+              & mconcat
+
+          in Right $ CompiledQuery
+            { compiledStatements = compilerState.emitedCompiledStatements
+            , resultColumns = newColumns
+            , graph = Nothing
+            }
         else Left compilerState.errors
 
 compileProgram' :: Models -> Maybe Position -> RawQuery -> CompilerState
@@ -163,7 +197,7 @@ compileProgram' models mayPosition (RawQuery qss) =
 data Completion = Completion
   { newText :: Text
   , from :: Position
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, ToJSON)
 
 generateCompletions :: Position -> Models -> RawQuery -> [Completion]
 generateCompletions position models rawQuery =
@@ -180,7 +214,7 @@ data CompilerState = CompilerState
   , completionResult :: [Completion]
   , emitedCompiledStatements :: [QueryStatement Compiled]
   , errors :: [Error]
-  } deriving (Show)
+  } deriving (Show, Eq, Generic, ToJSON)
 
 type CompilerM = ValidateT () (StateT CompilerState Identity)
 
@@ -498,7 +532,7 @@ instance Eq FunctionTypeChecker where
 
 data TypeInfo = TypeInfo
   { variablesInScope :: [(Text, QueryExpression Compiled)]
-  } deriving (Show)
+  } deriving (Show, Eq, Generic, ToJSON)
 
 type TypeCheckM =
   StateT TypeInfo Identity

@@ -1,6 +1,6 @@
 {
   "Right": {
-    "unCompiledQuery": [
+    "compiledStatements": [
       {
         "contents": [
           [],
@@ -118,6 +118,11 @@
         ],
         "tag": "GroupBy"
       }
+    ],
+    "graph": null,
+    "resultColumns": [
+      "city.country_id",
+      "max_city"
     ]
   }
 }
