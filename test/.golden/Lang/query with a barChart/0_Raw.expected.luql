@@ -1,0 +1,2 @@
+from Languages as l
+barChart l.language_id, l.language_id

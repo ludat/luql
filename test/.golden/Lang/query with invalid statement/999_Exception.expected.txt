@@ -1,4 +1,4 @@
 [CompilerError "Invalid statement: something invalid" (Range {begin = 0, end = 17})]
 CallStack (from HasCallStack):
-  error, called at test/LangSpec.hs:232:29 in main:LangSpec
+  error, called at test/LangSpec.hs:238:29 in main:LangSpec
   itMatchesSnapshot, called at test/LangSpec.hs:44:3 in main:LangSpec

@@ -2,7 +2,7 @@ module LangSpec
     ( spec
     ) where
 
-import Control.Exception (bracket, evaluate, ErrorCall, catch)
+import Control.Exception (ErrorCall, bracket, catch, evaluate)
 import Control.Monad (when)
 
 import Data.Aeson
@@ -159,6 +159,12 @@ let a = 7
     [__i|
         from Languages as l
         return l.language_id
+    |]
+
+  itMatchesSnapshot "query with a barChart"
+    [__i|
+      from Languages as l
+      barChart l.language_id, l.language_id
     |]
 
 withDatabase :: (PG.Connection -> IO ()) -> IO ()

@@ -27,7 +27,7 @@ import Data.Function ((&))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.String.Interpolate (iii, i)
+import Data.String.Interpolate (i, iii)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Void (Void)
@@ -131,7 +131,7 @@ type Models = Map Text ModelDefinition
 
 data BarChartDefinition = BarChartDefinition
   { xAxis :: Text
-  , yAxis :: Text
+  , yAxes :: [Text]
   } deriving (Show, Eq, Generic, ToJSON)
 
 data SingleValueGaugeDefinition = SingleValueGaugeDefinition
@@ -166,7 +166,7 @@ compileProgram models rawQuery =
           in Right $ CompiledQuery
             { compiledStatements = compilerState.emitedCompiledStatements
             , resultColumns = newColumns
-            , graph = Nothing
+            , graph = compilerState.graphInfo
             }
         else Left compilerState.errors
 
@@ -188,6 +188,7 @@ compileProgram' models mayPosition (RawQuery qss) =
                 , completionIntent = mayPosition
                 , completionResult = []
                 , emitedCompiledStatements = []
+                , graphInfo = Nothing
                 }
               )
           )
@@ -214,6 +215,7 @@ data CompilerState = CompilerState
   , completionResult :: [Completion]
   , emitedCompiledStatements :: [QueryStatement Compiled]
   , errors :: [Error]
+  , graphInfo :: Maybe DrawStrategy
   } deriving (Show, Eq, Generic, ToJSON)
 
 type CompilerM = ValidateT () (StateT CompilerState Identity)
@@ -439,6 +441,25 @@ compileStatement (StmtExt (ExtStmtEmptyLine srcRange)) = do
       , Completion "order by" srcRange.begin
       , Completion "let" srcRange.begin
       ]
+compileStatement (StmtExt (ExtStmtBarChart _ xExprRaw yExprsRaw) ) = do
+  xAxis <- compileExpression xExprRaw >>= getColumnAsText (getSrcRange xExprRaw)
+  yAxes <- forM yExprsRaw $ \yExprRaw -> compileExpression yExprRaw >>= getColumnAsText (getSrcRange yExprRaw)
+  modify' $ \cs ->
+    cs {
+      graphInfo = Just $ BarChart $ BarChartDefinition
+        { xAxis = xAxis
+        , yAxes = yAxes
+        }
+    }
+  where
+    getColumnAsText :: Range -> QueryExpression Compiled -> CompilerM Text
+    getColumnAsText srcRange expr =
+      case expr of
+        (ExprExt (ComputedColumn _ (ColumnWithTable t n))) -> pure [i|#{t}.#{n}|]
+        (ExprExt (ComputedColumn _ (ColumnWithoutTable n))) -> pure n
+        (_) -> addCatastrophicError [i|must be a literal column to be used in here|] srcRange
+
+
 
 replaceExpression :: QueryExpression Raw -> QueryExpression Raw -> QueryExpression Raw -> QueryExpression Raw
 replaceExpression oldExpression newExpression expressionToReplace =

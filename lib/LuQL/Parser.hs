@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -26,7 +28,8 @@ import Text.Megaparsec.Char.Lexer qualified as L
 type Parser = Parsec Void Text
 
 newtype RawQuery = RawQuery {unRawQuery :: [QueryStatement Raw]}
-  deriving (Eq, Generic, Show, ToJSON)
+  deriving (Eq, Generic, Show)
+  deriving newtype (ToJSON)
 
 instance ToJSON (QueryStatement Raw)
 instance ToJSON (QueryExpression Raw)
@@ -45,7 +48,8 @@ type instance StmtE "ext" "ext" Raw = ExtStmtRaw
 
 data ExtStmtRaw
   = ExtStmtInvalid (StmtE "invalid" "ctx" Raw) Text
-  | ExtStmtEmptyLine (StmtE "invalid" "ctx" Raw)
+  | ExtStmtEmptyLine (StmtE "empty" "ctx" Raw)
+  | ExtStmtBarChart (StmtE "barchart" "ctx" Raw) (QueryExpression Raw) [QueryExpression Raw]
   deriving (Show, Generic, Eq)
 
 instance ToJSON ExtStmtRaw
@@ -305,6 +309,16 @@ orderByParser = do
       `sepBy1` symbol ","
   pure $ OrderBy pos orderExpr
 
+barChartParser :: Parser (QueryStatement Raw)
+barChartParser = do
+  (pos, (xExpr, yExpr)) <- withLocation $ do
+    _ <- symbol "barChart"
+    xExpr <- expressionParser
+    void $ symbol ","
+    yExpr <- expressionParser `sepBy1` symbol ","
+    pure (xExpr, yExpr)
+  pure $ StmtExt $ ExtStmtBarChart pos xExpr yExpr
+
 returnParser :: Parser (QueryStatement Raw)
 returnParser = do
   (pos, values) <- withLocation $ do
@@ -359,6 +373,7 @@ statementParser = do
   <|> joinParser
   <|> groupByParser
   <|> orderByParser
+  <|> barChartParser
   <|> emptyLineParser
   <|> invalidStatementParser
 
@@ -388,6 +403,7 @@ instance HasSrcRange (QueryStatement Raw) where
   getSrcRange (Return pos _) = pos
   getSrcRange (StmtExt (ExtStmtInvalid pos _)) = pos
   getSrcRange (StmtExt (ExtStmtEmptyLine pos)) = pos
+  getSrcRange (StmtExt (ExtStmtBarChart pos _ _)) = pos
 
 
 instance HasSrcRange (QueryExpression Raw) where

@@ -1,0 +1,1 @@
+SELECT "t".* FROM (SELECT "language"."language_id" AS "l.language_id", "language"."last_update" AS "l.last_update", "language"."name" AS "l.name" FROM "language") AS "t"

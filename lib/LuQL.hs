@@ -1,20 +1,21 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 module LuQL where
 
+import Data.Aeson
 import Data.String.Interpolate (iii)
+import Data.Text (Text)
 
 import Database.PostgreSQL.Query
 import Database.PostgreSQL.Query qualified as PG
+
+import GHC.Generics (Generic)
 
 import LuQL.Compiler
 import LuQL.Parser
 import LuQL.Render
 import LuQL.Runner
 import LuQL.SqlGeneration
-import Data.Text (Text)
-import GHC.Generics (Generic)
-import Data.Aeson
 
 completeQuery :: Models -> Int -> RawQuery -> [Completion]
 completeQuery models position rawQuery = do
