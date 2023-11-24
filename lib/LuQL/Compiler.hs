@@ -424,6 +424,56 @@ compileStatement (Let _srcRange name expression) = do
   emit $ Let () name e
 compileStatement (Return _ exprs) = do
   tExprs <- mapM compileExpression exprs
+
+  oldTypeInfo <- getTypeInfo
+  compiledColumns <- forM exprs $ \(column) -> do
+    compiledExpression <- compileExpression column
+    pure (compiledExpression)
+
+  vars <- foldM (\acc (name, expression) -> do
+    case expression of
+      ExprExt (ComputedModel (ModelType propsMap) modelName tableName relatedTables) -> do
+        let relevantColumns =
+              compiledColumns
+              & mapMaybe (\case
+                (ExprExt (ComputedColumn _ (ColumnWithTable t n))) | t == modelName -> Just n
+                _ -> Nothing
+                )
+        pure $ acc ++
+          [ (name, ExprExt (ComputedModel
+              (ModelType (propsMap & Map.mapMaybeWithKey (\k v ->
+                  if k `elem` relevantColumns
+                      then Just $ v
+                      else Nothing
+                )))
+              modelName
+              tableName
+              (relatedTables & Map.filter (\(_, column) -> column `elem` relevantColumns)))
+            )
+          ]
+      ExprExt (ComputedModelDefinition _ _) ->
+        pure $ acc ++ [(name, expression)]
+      ExprExt (ComputedColumn t columnDefinition) ->
+        let relevantColumns =
+              compiledColumns
+              & mapMaybe (\case
+                (ExprExt (ComputedColumn _ (ColumnWithoutTable n))) -> Just n
+                _ -> Nothing
+                )
+        in
+          if name `elem` relevantColumns
+            then pure $ acc ++ [(name, ExprExt $ ComputedColumn t columnDefinition)]
+            else pure acc
+
+      _ -> pure acc
+    )
+    ([] :: [(Text, QueryExpression Compiled)])
+    oldTypeInfo.variablesInScope
+
+  modifyTypeInfo $ \ty ->
+    ty {
+      variablesInScope = vars
+    }
   emit $ Return () tExprs
 compileStatement (OrderBy _ exprs) = do
   tExprs <- forM exprs $ \(expr, dir) -> do
@@ -474,7 +524,7 @@ replaceExpression oldExpression newExpression expressionToReplace =
         RawSql ctx (exprs & fmap (fmap go))
       Prop ctx expr name ->
         Prop ctx (go expr) name
-      ExprExt (ExtExprEmptyExpr ctx)->
+      ExprExt (ExtExprEmptyExpr ctx) ->
         ExprExt (ExtExprEmptyExpr ctx)
       Ref ctx name ->
         Ref ctx name

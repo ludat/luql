@@ -61,9 +61,7 @@
     ],
     "graph": null,
     "resultColumns": [
-      "l.language_id",
-      "l.last_update",
-      "l.name"
+      "l.language_id"
     ]
   }
 }
