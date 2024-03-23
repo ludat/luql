@@ -423,7 +423,7 @@ compileStatement (Let _srcRange name expression) = do
       }
 
   emit $ Let () name e
-compileStatement (Return _ exprs) = do
+compileStatement (Select _ exprs) = do
   tExprs <- mapM compileExpression exprs
 
   oldTypeInfo <- getTypeInfo
@@ -475,7 +475,7 @@ compileStatement (Return _ exprs) = do
     ty {
       variablesInScope = vars
     }
-  emit $ Return () tExprs
+  emit $ Select () tExprs
 compileStatement (OrderBy _ exprs) = do
   tExprs <- forM exprs $ \(expr, dir) -> do
     compiledExpr <- compileExpression expr

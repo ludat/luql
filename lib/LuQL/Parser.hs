@@ -319,12 +319,12 @@ barChartParser = do
     pure (xExpr, yExpr)
   pure $ StmtExt $ ExtStmtBarChart pos xExpr yExpr
 
-returnParser :: Parser (QueryStatement Raw)
-returnParser = do
+selectParser :: Parser (QueryStatement Raw)
+selectParser = do
   (pos, values) <- withLocation $ do
-    _ <- symbol "return"
+    _ <- symbol "select"
     expressionParser `sepBy1` symbol ","
-  pure $ Return pos values
+  pure $ Select pos values
 
 asParser :: Parser (QueryExpression Raw, Maybe Text)
 asParser = do
@@ -368,7 +368,7 @@ statementParser :: Parser (QueryStatement Raw)
 statementParser = do
   fromParser
   <|> whereParser
-  <|> returnParser
+  <|> selectParser
   <|> letParser
   <|> joinParser
   <|> groupByParser
@@ -400,7 +400,7 @@ instance HasSrcRange (QueryStatement Raw) where
   getSrcRange (Join pos _ _) = pos
   getSrcRange (Let pos _ _) = pos
   getSrcRange (OrderBy pos _) = pos
-  getSrcRange (Return pos _) = pos
+  getSrcRange (Select pos _) = pos
   getSrcRange (StmtExt (ExtStmtInvalid pos _)) = pos
   getSrcRange (StmtExt (ExtStmtEmptyLine pos)) = pos
   getSrcRange (StmtExt (ExtStmtBarChart pos _ _)) = pos

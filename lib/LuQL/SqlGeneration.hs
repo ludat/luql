@@ -185,7 +185,7 @@ compileStatement q@(T.OrderBy _ exprs) = do
     query
       { orderBy = orderByExprs
       }
-compileStatement s@(T.Return () expressions) = do
+compileStatement s@(T.Select () expressions) = do
   addNewSubqueryIfNecessary s
   modifyPartialQuery $
     \query ->
@@ -226,7 +226,7 @@ isNewSubqueryIfNecessary expr pq =
     -- Aca podria optimizar porque si el nuevo let no usa los anteriores
     -- esta todo bien
     (T.Let _ _ _) -> thereIsAGroupBy || thereAreOtherLets
-    (T.Return _ _) -> thereAreOtherLets
+    (T.Select _ _) -> thereAreOtherLets
     (T.GroupBy _ _ _) -> thereIsAGroupBy || thereAreOtherLets || thereIsAJoin
     (T.OrderBy _ _) -> False
   where

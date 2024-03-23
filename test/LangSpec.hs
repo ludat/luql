@@ -152,13 +152,13 @@ let a = 7
   itMatchesSnapshot "a return keeps a simple column"
     [__i|
         let a = 7
-        return a
+        select a
     |]
 
   itMatchesSnapshot "a return keeps a model column"
     [__i|
         from Languages as l
-        return l.language_id
+        select l.language_id
     |]
 
   itMatchesSnapshot "query with a barChart"

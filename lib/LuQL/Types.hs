@@ -26,7 +26,7 @@ data QueryStatement stype
   | Let (StmtE "let" "ctx" stype) Text (QueryExpression stype)
   | GroupBy (StmtE "groupby" "ctx" stype) [(QueryExpression stype, Maybe Text)] [QueryStatement stype]
   | OrderBy (StmtE "orderby" "ctx" stype) [(QueryExpression stype, Maybe OrderDirection)]
-  | Return (StmtE "return" "ctx" stype) [QueryExpression stype]
+  | Select (StmtE "select" "ctx" stype) [QueryExpression stype]
   | StmtExt (StmtE "ext" "ext" stype)
   deriving (Generic)
 
@@ -44,7 +44,7 @@ type ForAllStmt (c :: Type -> Constraint) stype =
     c (StmtE "let" "ctx" stype),
     c (StmtE "groupby" "ctx" stype),
     c (StmtE "orderby" "ctx" stype),
-    c (StmtE "return" "ctx" stype),
+    c (StmtE "select" "ctx" stype),
     c (StmtE "ext" "ext" stype),
     c (StmtE "from" "model" stype),
     c (StmtE "join" "model" stype),
