@@ -30,6 +30,7 @@ import GHC.Generics
 import LuQL.Compiler hiding (compileExpression, compileStatement)
 import LuQL.Compiler qualified as T
 import LuQL.Types qualified as T
+import Control.Monad (when, forM_)
 
 data SqlExpression
   = LiteralString Text

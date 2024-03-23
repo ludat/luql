@@ -38,6 +38,7 @@ import LuQL.Parser
 import LuQL.Types
 
 import Safe (headMay)
+import Control.Monad (forM_, void, unless, guard, forM, foldM)
 
 data Compiled
 
